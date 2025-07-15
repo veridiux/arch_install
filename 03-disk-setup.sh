@@ -139,6 +139,11 @@ if [[ "$AUTOPART" == "y" ]]; then
     swapon "$SWAP_PART"
   fi
 
+
+
+
+
+
 else
   echo "🛠 Manual partitioning selected. You will be dropped into cfdisk."
   read -rp "Press Enter to launch cfdisk..."
@@ -190,8 +195,33 @@ else
     read -rp "Swap partition (e.g., /dev/sda4): " SWAP_PART
   fi
 
+  # Helper function to mkfs with correct force flags
+  mkfs_with_force() {
+    local fs_type=$1
+    local part=$2
+
+    case "$fs_type" in
+      ext4)
+        mkfs.ext4 -F "$part"
+        ;;
+      xfs)
+        mkfs.xfs -f "$part"
+        ;;
+      btrfs)
+        mkfs.btrfs "$part"
+        ;;
+      f2fs)
+        mkfs.f2fs "$part"
+        ;;
+      *)
+        echo "Unsupported fs type '$fs_type', defaulting to mkfs.$fs_type without force flag"
+        mkfs."$fs_type" "$part"
+        ;;
+    esac
+  }
+
   echo "🔍 Formatting root partition with $FS_TYPE..."
-  mkfs."$FS_TYPE" -f "$ROOT_PART"
+  mkfs_with_force "$FS_TYPE" "$ROOT_PART"
 
   if [ "$FIRMWARE_MODE" = "UEFI" ]; then
     echo "🔍 Formatting boot partition as FAT32 EFI..."
@@ -203,7 +233,7 @@ else
 
   if [[ "$HOME_CHOICE" =~ ^[Yy]$ ]]; then
     echo "🔍 Formatting home partition with $HOME_FS_TYPE..."
-    mkfs."$HOME_FS_TYPE" -f "$HOME_PART"
+    mkfs_with_force "$HOME_FS_TYPE" "$HOME_PART"
   fi
 
   if [[ "$SWAP_CHOICE" =~ ^[Yy]$ ]]; then
@@ -244,5 +274,9 @@ else
   fi
 
   echo "✅ Manual disk setup complete."
+fi
+
+echo "✅ Disk setup complete. Proceed to 02-base-install.sh"
+
 
 fi
