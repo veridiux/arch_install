@@ -227,7 +227,7 @@ else
 		f2fs)
 		  mkfs.f2fs -f "$part" ;;
 		btrfs)
-		  mkfs.btrfs "$part" ;;
+		  mkfs.btrfs -f "$part" ;;
 		*)
 		  echo "❌ Unknown filesystem type: $fs_type" >&2
 		  return 1
