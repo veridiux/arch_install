@@ -86,15 +86,6 @@ if [[ "$AUTOPART" == "y" ]]; then
     echo "📁 Formatting /boot (FAT32 EFI)..."
     mkfs.fat -F32 "$BOOT_PART"
 
-
-
-
-
-
-
-
-
-
   else
     # BIOS mode - simpler scheme, no ESP partition
     parted "$DRIVE" --script mklabel msdos
@@ -147,12 +138,6 @@ if [[ "$AUTOPART" == "y" ]]; then
     mkswap "$SWAP_PART"
     swapon "$SWAP_PART"
   fi
-
-
-
-
-
-
 
 else
   echo "🛠 Manual partitioning selected. You will be dropped into cfdisk."
@@ -227,6 +212,12 @@ else
   fi
 
   echo "✅ Manual disk setup complete."
+
+
+
+
+
+
 
 
 echo "✅ Disk setup complete. Proceed to 02-base-install.sh"
