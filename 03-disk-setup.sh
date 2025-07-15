@@ -47,8 +47,24 @@ if [[ "$AUTO_PART" == "y" ]]; then
 
   read -rp "💤 Create a swap partition? [y/n]: " USE_SWAP
   if [[ "$USE_SWAP" == "y" ]]; then
-    read -rp "🔢 Enter swap size (e.g., 2G): " SWAP_SIZE
-    update_config "SWAP_SIZE" "$SWAP_SIZE"
+    read -rp "🔢 Enter swap size (e.g., 2G or 2048MiB): " SWAP_SIZE_RAW
+
+	# Normalize input to parted format (MiB or GiB)
+	if [[ "$SWAP_SIZE_RAW" =~ ^[0-9]+[Gg]$ ]]; then
+	  SIZE_NUM="${SWAP_SIZE_RAW%[Gg]}"
+	  SWAP_SIZE="${SIZE_NUM}GiB"
+	elif [[ "$SWAP_SIZE_RAW" =~ ^[0-9]+[Mm]$ ]]; then
+	  SIZE_NUM="${SWAP_SIZE_RAW%[Mm]}"
+	  SWAP_SIZE="${SIZE_NUM}MiB"
+	elif [[ "$SWAP_SIZE_RAW" =~ ^[0-9]+[MmIi][Bb]$ ]]; then
+	  SWAP_SIZE="$SWAP_SIZE_RAW"
+	else
+	  echo "❌ Invalid swap size format."
+	  exit 1
+	fi
+
+	update_config "SWAP_SIZE" "$SWAP_SIZE"
+
   fi
 
   echo "🧹 Wiping drives and setting up partitions..."
