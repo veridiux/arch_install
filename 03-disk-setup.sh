@@ -255,7 +255,8 @@ else
     read -rp "Do you want to reformat it to $FS_TYPE? [y/N]: " confirm
     if [[ "$confirm" =~ ^[Yy]$ ]]; then
       echo "Formatting root partition with $FS_TYPE..."
-      mkfs_with_force "$FS_TYPE" "$ROOT_PART"
+      #mkfs_with_force "$FS_TYPE" "$ROOT_PART"
+	  mkfs.btrfs -f "$ROOT_PART"
     else
       echo "Keeping existing filesystem on root partition."
     fi
