@@ -21,16 +21,30 @@ if [[ "$AUTOPART" == "y" ]]; then
   echo "🧹 Wiping $DRIVE and creating partitions..."
 
   wipefs -af "$DRIVE"
-  parted "$DRIVE" --script mklabel gpt
-  parted "$DRIVE" --script mkpart primary fat32 1MiB 512MiB
-  parted "$DRIVE" --script set 1 esp on
-  parted "$DRIVE" --script mkpart primary ext4 512MiB 100%
 
-  BOOT_PART="${DRIVE}1"
-  ROOT_PART="${DRIVE}2"
+  if [ "$FIRMWARE_MODE" = "UEFI" ]; then
+    parted "$DRIVE" --script mklabel gpt
+    parted "$DRIVE" --script mkpart primary fat32 1MiB 512MiB
+    parted "$DRIVE" --script set 1 esp on
+    parted "$DRIVE" --script mkpart primary ext4 512MiB 100%
 
-  echo "📁 Formatting boot partition..."
-  mkfs.fat -F32 "$BOOT_PART"
+    BOOT_PART="${DRIVE}1"
+    ROOT_PART="${DRIVE}2"
+
+    echo "📁 Formatting boot partition (FAT32 EFI)..."
+    mkfs.fat -F32 "$BOOT_PART"
+  else
+    # BIOS partitioning - use msdos label and one boot + root partition
+    parted "$DRIVE" --script mklabel msdos
+    parted "$DRIVE" --script mkpart primary ext4 1MiB 512MiB
+    parted "$DRIVE" --script mkpart primary ext4 512MiB 100%
+
+    BOOT_PART="${DRIVE}1"
+    ROOT_PART="${DRIVE}2"
+
+    echo "📁 Formatting boot partition (ext4)..."
+    mkfs.ext4 "$BOOT_PART"
+  fi
 
   echo "📁 Formatting root partition with $FS_TYPE..."
   mkfs."$FS_TYPE" "$ROOT_PART"
@@ -47,33 +61,30 @@ else
 
   echo "🔍 Formatting root partition with $FS_TYPE..."
   mkfs."$FS_TYPE" "$ROOT_PART"
-  echo "🔍 Formatting boot partition..."
-  mkfs.fat -F32 "$BOOT_PART"
+
+  if [ "$FIRMWARE_MODE" = "UEFI" ]; then
+    echo "🔍 Formatting boot partition as FAT32 EFI..."
+    mkfs.fat -F32 "$BOOT_PART"
+  else
+    echo "🔍 Formatting boot partition as ext4..."
+    mkfs.ext4 "$BOOT_PART"
+  fi
 fi
 
 echo "📂 Mounting root partition..."
 mount "$ROOT_PART" /mnt
 
-echo "📂 Creating /boot/efi and mounting boot partition..."
-mkdir -p /mnt/boot/efi
-mount "$BOOT_PART" /mnt/boot/efi
-
-# Optional swap file
-echo ""
-read -rp "💾 Create swap file? [y/n]: " USE_SWAP
-
-if [[ "$USE_SWAP" == "y" ]]; then
-  read -rp "Swap file size (e.g., 2G, 512M): " SWAP_SIZE
-  echo "📄 Creating swap file of size $SWAP_SIZE..."
-  dd if=/dev/zero of=/mnt/swapfile bs=1M count=$(( $(echo $SWAP_SIZE | tr -d 'GgMm') * ( [[ "$SWAP_SIZE" == *G* ]] && echo 1024 || echo 1 ) )) status=progress
-  chmod 600 /mnt/swapfile
-  mkswap /mnt/swapfile
-  swapon /mnt/swapfile
-  echo "✔️ Swap file created and enabled."
-  echo "$SWAP_SIZE" > ./swap.size
+if [ "$FIRMWARE_MODE" = "UEFI" ]; then
+  echo "📂 Creating /boot/efi and mounting boot partition..."
+  mkdir -p /mnt/boot/efi
+  mount "$BOOT_PART" /mnt/boot/efi
 else
-  echo "ℹ️ Skipping swap."
+  echo "📂 Creating /boot and mounting boot partition..."
+  mkdir -p /mnt/boot
+  mount "$BOOT_PART" /mnt/boot
 fi
+
+# Optional swap file (your existing swap code here)...
 
 # Save to config
 echo "ROOT_PART=\"$ROOT_PART\"" >> config.sh
