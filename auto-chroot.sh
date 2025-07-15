@@ -2,8 +2,8 @@
 set -e
 
 # === CONFIGURE THESE ===
-ROOT_PART="/dev/sdX2"     # ← Your root partition
-EFI_PART="/dev/sdX1"      # ← Your EFI/boot partition
+ROOT_PART="/dev/sda2"     # ← Your root partition
+EFI_PART="/dev/sda1"      # ← Your EFI/boot partition
 HOME_PART=""              # ← Optional: /dev/sdX3
 SWAP_PART=""              # ← Optional: /dev/sdX4
 
