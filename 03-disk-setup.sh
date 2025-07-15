@@ -18,27 +18,7 @@ echo ""
 echo "!!!! -- IF THE FOLLOWING OPTION IS USED IT WILL ERASE EVERYHTHING -- !!!!!"
 read -rp "⚙️  Use automatic partitioning? [y/n]: " AUTOPART
 
-detect_fs() {
-  local part=$1
-  blkid -o value -s TYPE "$part"
-}
 
-mkfs_with_force() {
-  local fs_type=$1
-  local part=$2
-  # Filesystems where -f is valid (like ext4, xfs, f2fs), else skip -f
-  case "$fs_type" in
-    ext4|xfs|f2fs)
-      mkfs."$fs_type" -f "$part"
-      ;;
-    btrfs)
-      mkfs.btrfs "$part"
-      ;;
-    *)
-      echo "Unknown filesystem type: $fs_type. Skipping format."
-      ;;
-  esac
-}
 
 
 
@@ -216,7 +196,36 @@ else
   if [[ "$SWAP_CHOICE" =~ ^[Yy]$ ]]; then
     read -rp "Swap partition (e.g., /dev/sda4): " SWAP_PART
   fi
+  
+  
+  
+  detect_fs() {
+	  local part=$1
+	  blkid -o value -s TYPE "$part"
+	}
 
+  mkfs_with_force() {
+	  local fs_type=$1
+	  local part=$2
+	  # Filesystems where -f is valid (like ext4, xfs, f2fs), else skip -f
+	  case "$fs_type" in
+		ext4|xfs|f2fs)
+		  mkfs."$fs_type" -f "$part"
+		  ;;
+		btrfs)
+		  mkfs.btrfs "$part"
+		  ;;
+		*)
+		  echo "Unknown filesystem type: $fs_type. Skipping format."
+		  ;;
+	  esac
+	}
+  
+  
+  
+  
+  
+  
   # Format root partition with check
   current_fs=$(detect_fs "$ROOT_PART")
   if [ -n "$current_fs" ]; then
