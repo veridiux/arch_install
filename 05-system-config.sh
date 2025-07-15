@@ -20,11 +20,19 @@ hwclock --systohc
 echo "🗣️ Configuring locale..."
 sed -i "s/#$LOCALE UTF-8/$LOCALE UTF-8/" /etc/locale.gen
 locale-gen
-
 echo "LANG=$LOCALE" > /etc/locale.conf
 
 # --- Keymap ---
 echo "KEYMAP=us" > /etc/vconsole.conf
+
+# --- Multilib (Optional) ---
+if [ "$ENABLE_MULTILIB" = "true" ]; then
+  echo "📦 Enabling multilib repository..."
+  sed -i '/#\\[multilib\\]/,/#Include/ s/^#//' /etc/pacman.conf
+  pacman -Sy
+else
+  echo "⏭️ Skipping multilib repository setup."
+fi
 
 # --- Initramfs ---
 echo "🧰 Rebuilding initramfs..."
