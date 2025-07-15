@@ -18,7 +18,7 @@ hwclock --systohc
 
 # --- Locale ---
 echo "🗣️ Configuring locale..."
-sed -i "s/#$LOCALE UTF-8/$LOCALE UTF-8/" /etc/locale.gen
+sed -i "s/^#$LOCALE UTF-8/$LOCALE UTF-8/" /etc/locale.gen
 locale-gen
 echo "LANG=$LOCALE" > /etc/locale.conf
 
@@ -28,7 +28,7 @@ echo "KEYMAP=us" > /etc/vconsole.conf
 # --- Multilib (Optional) ---
 if [ "$ENABLE_MULTILIB" = "true" ]; then
   echo "📦 Enabling multilib repository..."
-  sed -i '/#\\[multilib\\]/,/#Include/ s/^#//' /etc/pacman.conf
+  sed -i '/\\[multilib\\]/,/Include/ s/^#//' /etc/pacman.conf
   pacman -Sy
 else
   echo "⏭️ Skipping multilib repository setup."
@@ -47,7 +47,7 @@ if [ "$BOOTLOADER" = "grub" ]; then
   echo "💻 Installing GRUB bootloader..."
 
   if [ "$FIRMWARE_MODE" = "UEFI" ]; then
-    grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=GRUB
+    grub-install --target=x86_64-efi --efi-directory=/boot --bootloader-id=GRUB
   else
     grub-install --target=i386-pc $DRIVE
   fi
@@ -65,6 +65,7 @@ elif [ "$BOOTLOADER" = "systemd-boot" ]; then
   bootctl install
 
   echo "🔧 Creating loader.conf..."
+  mkdir -p /boot/loader
   cat <<LOADER > /boot/loader/loader.conf
 default arch
 timeout 3
@@ -72,6 +73,7 @@ editor no
 LOADER
 
   echo "🔧 Creating arch.conf..."
+  mkdir -p /boot/loader/entries
   PARTUUID=\$(blkid -s PARTUUID -o value $ROOT_PART)
   cat <<ENTRY > /boot/loader/entries/arch.conf
 title   Arch Linux
