@@ -249,7 +249,7 @@ else
 	  else
 		echo "✅ mkfs.$fs_type succeeded on $part" >&2
 	  fi
-}
+	}
 
 
 
