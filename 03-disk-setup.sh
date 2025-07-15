@@ -1,5 +1,8 @@
 #!/bin/bash
-set -e
+set -euo pipefail
+trap 'echo "❌ Error on line $LINENO"' ERR
+exec > >(tee install.log) 2>&1
+
 
 source ./config.sh
 
@@ -211,8 +214,10 @@ else
 	  local fs_type=$1
 	  local part=$2
 
-	  # Try to unmount if mounted (ignore errors)
+	  # Try to unmount in case it's mounted
 	  umount "$part" 2>/dev/null
+
+	  echo "🧪 Running mkfs for $fs_type on $part..." >&2
 
 	  case "$fs_type" in
 		ext4)
@@ -224,9 +229,17 @@ else
 		btrfs)
 		  mkfs.btrfs "$part" ;;
 		*)
-		  echo "❌ Unknown filesystem type: $fs_type" ;;
+		  echo "❌ Unknown filesystem type: $fs_type" >&2
+		  return 1
+		  ;;
 	  esac
+
+	  if [ $? -ne 0 ]; then
+		echo "❌ mkfs.$fs_type failed on $part" >&2
+		exit 1
+	  fi
 	}
+
 
 
   
