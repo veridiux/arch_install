@@ -17,6 +17,17 @@ fi
 echo ""
 read -rp "⚙️  Use automatic partitioning? [y/n]: " AUTOPART
 
+# Helper function to update or append key=value pairs in config.sh
+update_or_append() {
+  local key="$1"
+  local value="$2"
+  if grep -q "^${key}=" config.sh; then
+    sed -i "s|^${key}=.*|${key}=\"${value}\"|" config.sh
+  else
+    echo "${key}=\"${value}\"" >> config.sh
+  fi
+}
+
 if [[ "$AUTOPART" == "y" ]]; then
   echo "🧹 Wiping $DRIVE and creating partitions..."
 
@@ -28,19 +39,30 @@ if [[ "$AUTOPART" == "y" ]]; then
     parted "$DRIVE" --script set 1 esp on
     parted "$DRIVE" --script mkpart primary ext4 512MiB 100%
 
-    BOOT_PART="${DRIVE}1"
-    ROOT_PART="${DRIVE}2"
+    if [[ "$DRIVE" =~ nvme ]]; then
+      BOOT_PART="${DRIVE}p1"
+      ROOT_PART="${DRIVE}p2"
+    else
+      BOOT_PART="${DRIVE}1"
+      ROOT_PART="${DRIVE}2"
+    fi
 
     echo "📁 Formatting boot partition (FAT32 EFI)..."
     mkfs.fat -F32 "$BOOT_PART"
+
   else
-    # BIOS partitioning - use msdos label and one boot + root partition
+    # BIOS partitioning - msdos label with boot + root
     parted "$DRIVE" --script mklabel msdos
     parted "$DRIVE" --script mkpart primary ext4 1MiB 512MiB
     parted "$DRIVE" --script mkpart primary ext4 512MiB 100%
 
-    BOOT_PART="${DRIVE}1"
-    ROOT_PART="${DRIVE}2"
+    if [[ "$DRIVE" =~ nvme ]]; then
+      BOOT_PART="${DRIVE}p1"
+      ROOT_PART="${DRIVE}p2"
+    else
+      BOOT_PART="${DRIVE}1"
+      ROOT_PART="${DRIVE}2"
+    fi
 
     echo "📁 Formatting boot partition (ext4)..."
     mkfs.ext4 "$BOOT_PART"
@@ -84,11 +106,24 @@ else
   mount "$BOOT_PART" /mnt/boot
 fi
 
-# Optional swap file (your existing swap code here)...
+# Create swap file if SWAP_SIZE is set in config.sh
+if [[ -n "$SWAP_SIZE" ]]; then
+  echo "💤 Creating swap file of size $SWAP_SIZE..."
 
-# Save to config
-echo "ROOT_PART=\"$ROOT_PART\"" >> config.sh
-echo "BOOT_PART=\"$BOOT_PART\"" >> config.sh
-echo "DRIVE=\"$DRIVE\"" >> config.sh
+  fallocate -l "$SWAP_SIZE" /mnt/swapfile
+  chmod 600 /mnt/swapfile
+  mkswap /mnt/swapfile
+  swapon /mnt/swapfile
+
+  # Add swapfile entry to fstab
+  echo "/swapfile none swap defaults 0 0" >> /mnt/etc/fstab
+else
+  echo "💤 No swap size specified; skipping swap file creation."
+fi
+
+# Update config.sh with partition info and drive
+update_or_append "ROOT_PART" "$ROOT_PART"
+update_or_append "BOOT_PART" "$BOOT_PART"
+update_or_append "DRIVE" "$DRIVE"
 
 echo "✅ Disk setup complete. Proceed to 02-base-install.sh"
