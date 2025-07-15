@@ -134,10 +134,6 @@ if [[ "$AUTOPART" == "y" ]]; then
     swapon "$SWAP_PART"
   fi
 
-else
-  # manual partitioning ...
-fi
-
 
 
 
