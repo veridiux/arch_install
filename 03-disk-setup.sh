@@ -261,7 +261,7 @@ else
       echo "Keeping existing filesystem on root partition."
     fi
   else
-    echo "Formatting root partition with $FS_TYPE..."
+    echo "Formatting root partition with $FS_TYPE...X"
     mkfs_with_force "$FS_TYPE" "$ROOT_PART"
   fi
 
