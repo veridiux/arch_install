@@ -1,18 +1,6 @@
 #!/bin/bash
 set -e
 
-read -rp "🔁 Would you like to check some things over? [Y/n]: " FINISH_CHOICE
-
-if [[ "$FINISH_CHOICE" =~ ^([Nn])$ ]]; then
-  echo "💤 Exiting without reboot."
-  echo "Make sure to run reboot.sh when you're done to finish unmounting everything"
-  exit 0
-else
-fi
-
-echo "🧹 Cleaning up and unmounting..."
-
-
 
 # Disable swap if any
 if swapon --show | grep -q '/mnt/swapfile'; then
