@@ -28,139 +28,116 @@ if [[ "$AUTOPART" == "y" ]]; then
   echo "🧹 Wiping $DRIVE and creating partitions..."
   wipefs -af "$DRIVE"
 
+  # Ask about swap partition
+  read -rp "Do you want a swap partition? [y/n]: " SWAP_CHOICE
+  if [[ "$SWAP_CHOICE" == "y" ]]; then
+    read -rp "Enter swap size in GiB (just number, e.g., 2): " SWAP_SIZE_GB
+    SWAP_SIZE="${SWAP_SIZE_GB}GiB"
+  else
+    SWAP_SIZE=""
+  fi
+
+  # Ask about separate /home partition
+  read -rp "Do you want a separate /home partition? [y/n]: " HOME_CHOICE
+  if [[ "$HOME_CHOICE" == "y" ]]; then
+    read -rp "Enter /home partition size in GiB (just number, e.g., 20): " HOME_SIZE_GB
+    HOME_SIZE="${HOME_SIZE_GB}GiB"
+  else
+    HOME_SIZE=""
+  fi
+
   if [ "$FIRMWARE_MODE" = "UEFI" ]; then
     parted "$DRIVE" --script mklabel gpt
     parted "$DRIVE" --script mkpart primary fat32 1MiB 512MiB
     parted "$DRIVE" --script set 1 esp on
-
     BOOT_PART="${DRIVE}1"
-    PART_NUM=2
 
-    # Ask if user wants separate /home partition
-    read -rp "Do you want a separate /home partition? [y/n]: " HOME_CHOICE
+    start_home=512MiB
+    end_home=""
+    start_swap=""
+    end_swap=""
 
-    # Ask if user wants swap partition and swap size
-    read -rp "Do you want a swap partition? [y/n]: " SWAP_CHOICE
-    if [[ "$SWAP_CHOICE" == "y" ]]; then
-      read -rp "Enter swap size (e.g., 2G): " SWAP_SIZE
+    if [[ -n "$HOME_SIZE" ]]; then
+      # Calculate /home end based on start + size
+      parted "$DRIVE" --script mkpart primary ext4 512MiB "$((512 + HOME_SIZE_GB * 1024))MiB"
+      HOME_PART="${DRIVE}2"
+      start_swap="$((512 + HOME_SIZE_GB * 1024))MiB"
+      next_part=3
     else
-      SWAP_SIZE=""
+      start_swap=512MiB
+      next_part=2
     fi
 
-    if [[ "$HOME_CHOICE" == "y" && -n "$SWAP_SIZE" ]]; then
-      # Need to create root, home, swap partitions
-      # Ask user for root size
-      read -rp "Enter root partition size (e.g., 20G): " ROOT_SIZE
-
-      # Create root partition from 512MiB to ROOT_SIZE
-      parted "$DRIVE" --script mkpart primary ext4 512MiB "$ROOT_SIZE"
-      ROOT_PART="${DRIVE}${PART_NUM}"
-      PART_NUM=$((PART_NUM + 1))
-
-      # Calculate home partition start and end (from ROOT_SIZE to (100% - SWAP_SIZE))
-      parted "$DRIVE" --script mkpart primary ext4 "$ROOT_SIZE" "-${SWAP_SIZE}"
-      HOME_PART="${DRIVE}${PART_NUM}"
-      PART_NUM=$((PART_NUM + 1))
-
-      # Create swap partition at the end
-      parted "$DRIVE" --script mkpart primary linux-swap "-${SWAP_SIZE}" 100%
-      SWAP_PART="${DRIVE}${PART_NUM}"
-
-    elif [[ "$HOME_CHOICE" == "y" ]]; then
-      # Home but no swap
-      read -rp "Enter root partition size (e.g., 20G): " ROOT_SIZE
-
-      parted "$DRIVE" --script mkpart primary ext4 512MiB "$ROOT_SIZE"
-      ROOT_PART="${DRIVE}${PART_NUM}"
-      PART_NUM=$((PART_NUM + 1))
-
-      parted "$DRIVE" --script mkpart primary ext4 "$ROOT_SIZE" 100%
-      HOME_PART="${DRIVE}${PART_NUM}"
-      SWAP_PART=""
-
-    elif [[ -n "$SWAP_SIZE" ]]; then
-      # Swap but no home
-      parted "$DRIVE" --script mkpart primary ext4 512MiB "-${SWAP_SIZE}"
-      ROOT_PART="${DRIVE}${PART_NUM}"
-      PART_NUM=$((PART_NUM + 1))
-
-      parted "$DRIVE" --script mkpart primary linux-swap "-${SWAP_SIZE}" 100%
-      SWAP_PART="${DRIVE}${PART_NUM}"
-      HOME_PART=""
-
+    if [[ -n "$SWAP_SIZE" ]]; then
+      # Calculate swap start as "end - swap size"
+      # parted needs absolute positions or negative offsets for end partitions.
+      # Using negative offset here:
+      parted "$DRIVE" --script mkpart primary linux-swap "-$SWAP_SIZE" 100%
+      SWAP_PART="${DRIVE}${next_part}"
+      # Root partition is between /boot (and /home if exists) and swap
+      parted "$DRIVE" --script mkpart primary ext4 "${HOME_CHOICE == y && echo "$((512 + HOME_SIZE_GB * 1024))MiB" || echo "512MiB"}" "-$SWAP_SIZE"
+      ROOT_PART="${DRIVE}$((next_part + 1))"
     else
-      # No home, no swap
-      parted "$DRIVE" --script mkpart primary ext4 512MiB 100%
-      ROOT_PART="${DRIVE}${PART_NUM}"
-      HOME_PART=""
-      SWAP_PART=""
+      # No swap, root takes all remaining space after /boot and optional /home
+      parted "$DRIVE" --script mkpart primary ext4 "${HOME_CHOICE == y && echo "$((512 + HOME_SIZE_GB * 1024))MiB" || echo "512MiB"}" 100%
+      ROOT_PART="${DRIVE}$((next_part))"
     fi
 
     echo "📁 Formatting /boot (FAT32 EFI)..."
     mkfs.fat -F32 "$BOOT_PART"
 
-    echo "📁 Formatting / (ext4)..."
-    mkfs.ext4 "$ROOT_PART"
-
-    if [[ -n "$HOME_PART" ]]; then
-      echo "📁 Formatting /home (ext4)..."
-      mkfs.ext4 "$HOME_PART"
-    fi
-
-    if [[ -n "$SWAP_PART" ]]; then
-      echo "⚙️ Setting up swap partition..."
-      mkswap "$SWAP_PART"
-    fi
-
   else
-    # BIOS partitioning fallback: similar logic can be applied here
+    # BIOS mode - simpler scheme, no ESP partition
     parted "$DRIVE" --script mklabel msdos
+
     parted "$DRIVE" --script mkpart primary ext4 1MiB 512MiB
     BOOT_PART="${DRIVE}1"
-    PART_NUM=2
 
-    # You can add similar interactive logic for home and swap here if needed
+    start_home=512MiB
+    next_part=2
 
-    parted "$DRIVE" --script mkpart primary ext4 512MiB 100%
-    ROOT_PART="${DRIVE}2"
+    if [[ -n "$HOME_SIZE" ]]; then
+      parted "$DRIVE" --script mkpart primary ext4 512MiB "$((512 + HOME_SIZE_GB * 1024))MiB"
+      HOME_PART="${DRIVE}2"
+      next_part=3
+      start_swap="$((512 + HOME_SIZE_GB * 1024))MiB"
+    else
+      start_swap=512MiB
+    fi
+
+    if [[ -n "$SWAP_SIZE" ]]; then
+      parted "$DRIVE" --script mkpart primary linux-swap "-$SWAP_SIZE" 100%
+      SWAP_PART="${DRIVE}${next_part}"
+      parted "$DRIVE" --script mkpart primary ext4 "$start_swap" "-$SWAP_SIZE"
+      ROOT_PART="${DRIVE}$((next_part + 1))"
+    else
+      parted "$DRIVE" --script mkpart primary ext4 "$start_swap" 100%
+      ROOT_PART="${DRIVE}${next_part}"
+    fi
 
     echo "📁 Formatting /boot (ext4)..."
     mkfs.ext4 "$BOOT_PART"
-    echo "📁 Formatting / (ext4)..."
-    mkfs.ext4 "$ROOT_PART"
-
-    HOME_PART=""
-    SWAP_PART=""
   fi
 
-  echo "📂 Mounting root partition..."
-  mount "$ROOT_PART" /mnt
-
-  if [ "$FIRMWARE_MODE" = "UEFI" ]; then
-    mkdir -p /mnt/boot/efi
-    mount "$BOOT_PART" /mnt/boot/efi
-  else
-    mkdir -p /mnt/boot
-    mount "$BOOT_PART" /mnt/boot
-  fi
+  # Format partitions
+  echo "📁 Formatting / (ext4)..."
+  mkfs.ext4 "$ROOT_PART"
 
   if [[ -n "$HOME_PART" ]]; then
-    mkdir -p /mnt/home
-    mount "$HOME_PART" /mnt/home
+    echo "📁 Formatting /home (ext4)..."
+    mkfs.ext4 "$HOME_PART"
   fi
 
   if [[ -n "$SWAP_PART" ]]; then
+    echo "🛑 Creating swap partition..."
+    mkswap "$SWAP_PART"
     swapon "$SWAP_PART"
   fi
 
-  # Save to config.sh
-  echo "ROOT_PART=\"$ROOT_PART\"" >> config.sh
-  echo "BOOT_PART=\"$BOOT_PART\"" >> config.sh
-  echo "HOME_PART=\"$HOME_PART\"" >> config.sh
-  echo "SWAP_PART=\"$SWAP_PART\"" >> config.sh
-  echo "DRIVE=\"$DRIVE\"" >> config.sh
-
+else
+  # manual partitioning ...
 fi
+
 
 
 
