@@ -33,3 +33,7 @@ EXTRA_PACKAGES=()
 # Username
 USERNAME="user"
 PASSWORD=""
+
+# Boot setup (set by 01-detect-boot.sh)
+FIRMWARE_MODE=""
+BOOTLOADER=""

@@ -43,11 +43,47 @@ echo "🔐 Set root password:"
 passwd
 
 # --- Bootloader ---
-echo "💻 Installing GRUB bootloader..."
-grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=GRUB
+if [ "$BOOTLOADER" = "grub" ]; then
+  echo "💻 Installing GRUB bootloader..."
 
-echo "📝 Generating GRUB config..."
-grub-mkconfig -o /boot/grub/grub.cfg
+  if [ "$FIRMWARE_MODE" = "UEFI" ]; then
+    grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=GRUB
+  else
+    grub-install --target=i386-pc $DRIVE
+  fi
+
+  echo "📝 Generating GRUB config..."
+  grub-mkconfig -o /boot/grub/grub.cfg
+
+elif [ "$BOOTLOADER" = "systemd-boot" ]; then
+  if [ "$FIRMWARE_MODE" != "UEFI" ]; then
+    echo "❌ systemd-boot is only supported on UEFI systems."
+    exit 1
+  fi
+
+  echo "⚙️ Installing systemd-boot bootloader..."
+  bootctl install
+
+  echo "🔧 Creating loader.conf..."
+  cat <<LOADER > /boot/loader/loader.conf
+default arch
+timeout 3
+editor no
+LOADER
+
+  echo "🔧 Creating arch.conf..."
+  PARTUUID=\$(blkid -s PARTUUID -o value $ROOT_PART)
+  cat <<ENTRY > /boot/loader/entries/arch.conf
+title   Arch Linux
+linux   /vmlinuz-linux
+initrd  /initramfs-linux.img
+options root=PARTUUID=\$PARTUUID rw
+ENTRY
+
+else
+  echo "❌ Unknown bootloader: \$BOOTLOADER"
+  exit 1
+fi
 
 EOF
 
