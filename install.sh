@@ -3,15 +3,14 @@ set -e
 
 SCRIPTS=(
   "01-precheck.sh"
-  
-  "01-disk-setup.sh"
-  "02-base-install.sh"
-  "03-hardware-detect.sh"
-  "04-system-config.sh"
-  "05-de-install.sh"
-  "06-user-setup.sh"
-  "07-package-select.sh"
-  "08-finalize.sh"
+  "02-disk-setup.sh"
+  "03-base-install.sh"
+  "04-hardware-detect.sh"
+  "05-system-config.sh"
+  "06-de-install.sh"
+  "07-user-setup.sh"
+  "08-package-select.sh"
+  "09-finalize.sh"
 )
 
 echo "🚀 Starting Arch Linux Automated Installer..."
