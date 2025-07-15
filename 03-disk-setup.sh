@@ -1,7 +1,8 @@
 #!/bin/bash
-set -euo pipefail
-trap 'echo "❌ Error on line $LINENO"' ERR
-exec > >(tee install.log) 2>&1
+set -e
+#set -euo pipefail
+#trap 'echo "❌ Error on line $LINENO"' ERR
+#exec > >(tee install.log) 2>&1
 
 
 source ./config.sh
