@@ -191,7 +191,7 @@ else
   fi
 
   echo "🔍 Formatting root partition with $FS_TYPE..."
-  mkfs -f "$FS_TYPE" "$ROOT_PART"
+  mkfs."$FS_TYPE" -f "$ROOT_PART"
 
   if [ "$FIRMWARE_MODE" = "UEFI" ]; then
     echo "🔍 Formatting boot partition as FAT32 EFI..."
@@ -203,7 +203,7 @@ else
 
   if [[ "$HOME_CHOICE" =~ ^[Yy]$ ]]; then
     echo "🔍 Formatting home partition with $HOME_FS_TYPE..."
-    mkfs -f "$HOME_FS_TYPE" "$HOME_PART"
+    mkfs."$HOME_FS_TYPE" -f "$HOME_PART"
   fi
 
   if [[ "$SWAP_CHOICE" =~ ^[Yy]$ ]]; then
