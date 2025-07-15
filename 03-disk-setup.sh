@@ -3,131 +3,122 @@ set -e
 
 source ./config.sh
 
-# Function to update or insert a variable in config.sh
+# Function to update config.sh variables
 update_config() {
   local key="$1"
   local value="$2"
-  if grep -q "^${key}=" config.sh; then
-    sed -i "s|^${key}=.*|${key}=\"${value}\"|" config.sh
-  else
-    echo "${key}=\"${value}\"" >> config.sh
-  fi
+  sed -i "/^$key=/c\\$key=\"$value\"" config.sh
 }
 
-echo "💡 Detected firmware: $FIRMWARE_MODE"
+echo "🖥 Firmware detected: $FIRMWARE_MODE"
+echo ""
+
+# Filesystem choice
+echo "📂 Choose a filesystem:"
+select fs in "ext4" "xfs" "btrfs" "zfs" "reiser4"; do
+  case "$fs" in
+    ext4|xfs|btrfs|zfs|reiser4) FS_TYPE="$fs"; break ;;
+    *) echo "❌ Invalid choice. Try again." ;;
+  esac
+done
+update_config "FS_TYPE" "$FS_TYPE"
 
 echo ""
-read -rp "🧠 Use automated partitioning? [y/n]: " AUTO_PART
-
-lsblk -dpno NAME,SIZE | grep -E "/dev/sd|/dev/nvme|/dev/vd"
+read -rp "⚙️  Use automatic partitioning? [y/n]: " AUTO_PART
 
 if [[ "$AUTO_PART" == "y" ]]; then
+  echo "🖴 Available disks:"
+  lsblk -dpno NAME,SIZE | grep -E "/dev/sd|/dev/nvme|/dev/vd"
   echo ""
-  read -rp "📦 Enter the primary drive to install Arch on (e.g., /dev/sda): " DRIVE
-  if [[ ! -b "$DRIVE" ]]; then
-    echo "❌ Invalid drive: $DRIVE"
-    exit 1
-  fi
 
-  echo ""
-  read -rp "🏠 Use a separate /home partition? [y/n]: " SEP_HOME
-  if [[ "$SEP_HOME" == "y" ]]; then
-    echo ""
-    read -rp "📁 Use a separate drive for /home? [y/n]: " SEP_HOME_DRIVE
-    if [[ "$SEP_HOME_DRIVE" == "y" ]]; then
+  read -rp "📦 Enter primary drive (e.g., /dev/sda): " DRIVE
+  [[ ! -b "$DRIVE" ]] && echo "❌ Invalid drive!" && exit 1
+
+  read -rp "🏠 Use a separate /home partition? [y/n]: " USE_HOME
+  if [[ "$USE_HOME" == "y" ]]; then
+    read -rp "📁 Use a separate drive for /home? [y/n]: " HOME_SEPARATE
+    if [[ "$HOME_SEPARATE" == "y" ]]; then
+      echo "🖴 Other drives:"
       lsblk -dpno NAME,SIZE | grep -E "/dev/sd|/dev/nvme|/dev/vd" | grep -v "$DRIVE"
-      read -rp "🔧 Enter second drive for /home (e.g., /dev/sdb): " HOME_DRIVE
-      if [[ ! -b "$HOME_DRIVE" ]]; then
-        echo "❌ Invalid second drive: $HOME_DRIVE"
-        exit 1
-      fi
+      read -rp "📦 Enter drive for /home (e.g., /dev/sdb): " HOME_DRIVE
+      [[ ! -b "$HOME_DRIVE" ]] && echo "❌ Invalid drive!" && exit 1
     fi
   fi
 
-  echo ""
-  read -rp "💤 Create swap partition? [y/n]: " ADD_SWAP
-  if [[ "$ADD_SWAP" == "y" ]]; then
+  read -rp "💤 Create a swap partition? [y/n]: " USE_SWAP
+  if [[ "$USE_SWAP" == "y" ]]; then
     read -rp "🔢 Enter swap size (e.g., 2G): " SWAP_SIZE
     update_config "SWAP_SIZE" "$SWAP_SIZE"
   fi
 
-  echo "🧹 Wiping and partitioning selected drives..."
+  echo "🧹 Wiping drives and setting up partitions..."
   wipefs -af "$DRIVE"
-  parted "$DRIVE" --script mklabel gpt
-
-  BOOT_PART=""
-  ROOT_PART=""
-  HOME_PART=""
-  SWAP_PART=""
+  [[ "$USE_HOME" == "y" && "$HOME_SEPARATE" == "y" ]] && wipefs -af "$HOME_DRIVE"
 
   if [[ "$FIRMWARE_MODE" == "UEFI" ]]; then
-    parted "$DRIVE" --script mkpart primary fat32 1MiB 513MiB
+    parted "$DRIVE" --script mklabel gpt
+    parted "$DRIVE" --script mkpart ESP fat32 1MiB 512MiB
     parted "$DRIVE" --script set 1 esp on
-    parted "$DRIVE" --script mkpart primary ext4 513MiB 100%
+    parted "$DRIVE" --script mkpart primary $FS_TYPE 512MiB 100%
+
     BOOT_PART="${DRIVE}1"
     ROOT_PART="${DRIVE}2"
-    mkfs.fat -F32 "$BOOT_PART"
   else
     parted "$DRIVE" --script mklabel msdos
-    parted "$DRIVE" --script mkpart primary ext4 1MiB 512MiB
-    parted "$DRIVE" --script mkpart primary ext4 512MiB 100%
+    parted "$DRIVE" --script mkpart primary $FS_TYPE 1MiB 512MiB
+    parted "$DRIVE" --script mkpart primary $FS_TYPE 512MiB 100%
+
     BOOT_PART="${DRIVE}1"
     ROOT_PART="${DRIVE}2"
-    mkfs.ext4 "$BOOT_PART"
   fi
 
-  mkfs.ext4 "$ROOT_PART"
+  if [[ "$USE_SWAP" == "y" ]]; then
+    parted "$DRIVE" --script mkpart primary linux-swap -${SWAP_SIZE} 100%
+    SWAP_PART="${DRIVE}3"
+    mkswap "$SWAP_PART"
+    swapon "$SWAP_PART"
+  fi
 
-  if [[ "$SEP_HOME" == "y" ]]; then
-    if [[ "$SEP_HOME_DRIVE" == "y" ]]; then
-      wipefs -af "$HOME_DRIVE"
+  if [[ "$USE_HOME" == "y" ]]; then
+    if [[ "$HOME_SEPARATE" == "y" ]]; then
       parted "$HOME_DRIVE" --script mklabel gpt
-      parted "$HOME_DRIVE" --script mkpart primary ext4 1MiB 100%
+      parted "$HOME_DRIVE" --script mkpart primary $FS_TYPE 1MiB 100%
       HOME_PART="${HOME_DRIVE}1"
     else
-      parted "$DRIVE" --script mkpart primary ext4 100% 100%  # Placeholder for smarter logic
-      HOME_PART="${DRIVE}3"
+      parted "$DRIVE" --script mkpart primary $FS_TYPE 100% 100%
+      HOME_PART="${DRIVE}4"
     fi
-    mkfs.ext4 "$HOME_PART"
   fi
 
-  if [[ "$ADD_SWAP" == "y" ]]; then
-    parted "$DRIVE" --script mkpart primary linux-swap -${SWAP_SIZE} 100%
-    SWAP_PART="${DRIVE}4"
-    mkswap "$SWAP_PART"
-  fi
+  # Format partitions
+  echo "📁 Formatting boot partition..."
+  [[ "$FIRMWARE_MODE" == "UEFI" ]] && mkfs.fat -F32 "$BOOT_PART" || mkfs."$FS_TYPE" "$BOOT_PART"
+  echo "📁 Formatting root partition..."
+  mkfs."$FS_TYPE" "$ROOT_PART"
+  [[ "$USE_HOME" == "y" ]] && echo "📁 Formatting home partition..." && mkfs."$FS_TYPE" "$HOME_PART"
 
 else
-  echo "🛠 Manual partitioning selected. You'll specify partitions next."
-  read -rp "🧱 Enter root partition (e.g., /dev/sda2): " ROOT_PART
-  read -rp "🧱 Enter boot partition (e.g., /dev/sda1): " BOOT_PART
-  read -rp "🧱 Enter home partition (leave empty if not using one): " HOME_PART
-  read -rp "🧱 Enter swap partition (leave empty if not using one): " SWAP_PART
+  echo "🛠 Manual partitioning selected. Launching cfdisk..."
+  read -rp "📦 Enter the target drive (e.g., /dev/sda): " DRIVE
+  cfdisk "$DRIVE"
 
-  echo "💾 Formatting root partition..."
-  mkfs.ext4 "$ROOT_PART"
+  read -rp "📁 Enter root partition (e.g., /dev/sda2): " ROOT_PART
+  read -rp "📁 Enter boot partition (e.g., /dev/sda1): " BOOT_PART
+  read -rp "🏠 Enter home partition (optional): " HOME_PART
+  read -rp "💤 Enter swap partition (optional): " SWAP_PART
 
-  if [[ "$FIRMWARE_MODE" == "UEFI" ]]; then
-    echo "💾 Formatting boot partition (FAT32)..."
-    mkfs.fat -F32 "$BOOT_PART"
-  else
-    echo "💾 Formatting boot partition (ext4)..."
-    mkfs.ext4 "$BOOT_PART"
-  fi
+  echo "📁 Formatting root..."
+  mkfs."$FS_TYPE" "$ROOT_PART"
 
-  if [[ -n "$HOME_PART" ]]; then
-    echo "💾 Formatting home partition..."
-    mkfs.ext4 "$HOME_PART"
-  fi
+  echo "📁 Formatting boot..."
+  [[ "$FIRMWARE_MODE" == "UEFI" ]] && mkfs.fat -F32 "$BOOT_PART" || mkfs."$FS_TYPE" "$BOOT_PART"
 
-  if [[ -n "$SWAP_PART" ]]; then
-    echo "💾 Setting up swap partition..."
-    mkswap "$SWAP_PART"
-  fi
+  [[ -n "$HOME_PART" ]] && echo "📁 Formatting home..." && mkfs."$FS_TYPE" "$HOME_PART"
+  [[ -n "$SWAP_PART" ]] && mkswap "$SWAP_PART" && swapon "$SWAP_PART"
 fi
 
-# Mounting
-echo "📂 Mounting root to /mnt..."
+# Mount everything
+echo "📂 Mounting root..."
 mount "$ROOT_PART" /mnt
 
 if [[ "$FIRMWARE_MODE" == "UEFI" ]]; then
@@ -138,14 +129,13 @@ else
   mount "$BOOT_PART" /mnt/boot
 fi
 
-if [[ -n "$HOME_PART" ]]; then
-  mkdir -p /mnt/home
-  mount "$HOME_PART" /mnt/home
-fi
+[[ -n "$HOME_PART" ]] && mkdir -p /mnt/home && mount "$HOME_PART" /mnt/home
 
-if [[ -n "$SWAP_PART" ]]; then
-  swapon "$SWAP_PART"
-fi
+# Persist to config
+update_config "ROOT_PART" "$ROOT_PART"
+update_config "BOOT_PART" "$BOOT_PART"
+update_config "DRIVE" "$DRIVE"
+[[ -n "$HOME_PART" ]] && update_config "HOME_PART" "$HOME_PART"
+[[ -n "$SWAP_PART" ]] && update_config "SWAP_PART" "$SWAP_PART"
 
-# Save to config
-update_config "ROOT_PART" "$ROOT_PA_
+echo "✅ Disk setup complete. Continue to 02-base-install.sh"
