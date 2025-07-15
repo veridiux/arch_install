@@ -201,26 +201,33 @@ else
   
   detect_fs() {
 	  local part=$1
-	  blkid -o value -s TYPE "$part"
+	  local fs=$(blkid -o value -s TYPE "$part")
+	  echo "Detected filesystem on $part: $fs" >&2  # Debug log
+	  echo "$fs"
 	}
+
 
   mkfs_with_force() {
 	  local fs_type=$1
 	  local part=$2
 
+	  # Try to unmount if mounted (ignore errors)
+	  umount "$part" 2>/dev/null
+
 	  case "$fs_type" in
 		ext4)
-		  mkfs.ext4 -F "$part" ;;   # -F is safer than -f here
+		  mkfs.ext4 -F "$part" ;;
 		xfs)
-		  mkfs.xfs -f "$part" ;;    # xfs uses -f to force
+		  mkfs.xfs -f "$part" ;;
 		f2fs)
 		  mkfs.f2fs -f "$part" ;;
 		btrfs)
-		  mkfs.btrfs "$part" ;;     # btrfs doesn't require -f
+		  mkfs.btrfs "$part" ;;
 		*)
 		  echo "❌ Unknown filesystem type: $fs_type" ;;
 	  esac
 	}
+
 
   
   
