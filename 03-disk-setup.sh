@@ -207,19 +207,21 @@ else
   mkfs_with_force() {
 	  local fs_type=$1
 	  local part=$2
-	  # Filesystems where -f is valid (like ext4, xfs, f2fs), else skip -f
+
 	  case "$fs_type" in
-		ext4|xfs|f2fs)
-		  mkfs."$fs_type" -f "$part"
-		  ;;
+		ext4)
+		  mkfs.ext4 -F "$part" ;;   # -F is safer than -f here
+		xfs)
+		  mkfs.xfs -f "$part" ;;    # xfs uses -f to force
+		f2fs)
+		  mkfs.f2fs -f "$part" ;;
 		btrfs)
-		  mkfs.btrfs "$part"
-		  ;;
+		  mkfs.btrfs "$part" ;;     # btrfs doesn't require -f
 		*)
-		  echo "Unknown filesystem type: $fs_type. Skipping format."
-		  ;;
+		  echo "❌ Unknown filesystem type: $fs_type" ;;
 	  esac
 	}
+
   
   
   
