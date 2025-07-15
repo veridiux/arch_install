@@ -86,6 +86,15 @@ if [[ "$AUTOPART" == "y" ]]; then
     echo "📁 Formatting /boot (FAT32 EFI)..."
     mkfs.fat -F32 "$BOOT_PART"
 
+
+
+
+
+
+
+
+
+
   else
     # BIOS mode - simpler scheme, no ESP partition
     parted "$DRIVE" --script mklabel msdos
@@ -119,6 +128,11 @@ if [[ "$AUTOPART" == "y" ]]; then
     mkfs.ext4 "$BOOT_PART"
   fi
 
+
+
+
+
+
   # Format partitions
   echo "📁 Formatting / (ext4)..."
   mkfs.ext4 "$ROOT_PART"
@@ -147,8 +161,17 @@ else
 
   echo "📁 After partitioning, enter your root partition:"
   read -rp "Root partition (e.g., /dev/sda2): " ROOT_PART
-  echo "Boot partition (e.g., /dev/sda1): "
-  read -rp "Boot partition: " BOOT_PART
+  read -rp "Boot partition (e.g., /dev/sda1): " BOOT_PART
+
+  read -rp "⚙️  Would you like to use a separate HOME partition? [y/n]: " HOME_CHOICE
+  if [[ "$HOME_CHOICE" =~ ^[Yy]$ ]]; then
+    read -rp "Home partition (e.g., /dev/sda3): " HOME_PART
+  fi
+
+  read -rp "⚙️  Would you like to use a SWAP partition? [y/n]: " SWAP_CHOICE
+  if [[ "$SWAP_CHOICE" =~ ^[Yy]$ ]]; then
+    read -rp "Swap partition (e.g., /dev/sda4): " SWAP_PART
+  fi
 
   echo "🔍 Formatting root partition with $FS_TYPE..."
   mkfs."$FS_TYPE" "$ROOT_PART"
@@ -160,26 +183,50 @@ else
     echo "🔍 Formatting boot partition as ext4..."
     mkfs.ext4 "$BOOT_PART"
   fi
-fi
 
-echo "📂 Mounting root partition..."
-mount "$ROOT_PART" /mnt
+  if [[ "$HOME_CHOICE" =~ ^[Yy]$ ]]; then
+    echo "🔍 Formatting home partition with $FS_TYPE..."
+    mkfs."$FS_TYPE" "$HOME_PART"
+  fi
 
-if [ "$FIRMWARE_MODE" = "UEFI" ]; then
-  echo "📂 Creating /boot/efi and mounting boot partition..."
-  mkdir -p /mnt/boot/efi
-  mount "$BOOT_PART" /mnt/boot/efi
-else
-  echo "📂 Creating /boot and mounting boot partition..."
-  mkdir -p /mnt/boot
-  mount "$BOOT_PART" /mnt/boot
-fi
+  if [[ "$SWAP_CHOICE" =~ ^[Yy]$ ]]; then
+    echo "🔍 Creating swap partition..."
+    mkswap "$SWAP_PART"
+    echo "Activating swap partition..."
+    swapon "$SWAP_PART"
+  fi
 
-# Optional swap file (your existing swap code here)...
+  echo "📂 Mounting root partition..."
+  mount "$ROOT_PART" /mnt
 
-# Save to config
-echo "ROOT_PART=\"$ROOT_PART\"" >> config.sh
-echo "BOOT_PART=\"$BOOT_PART\"" >> config.sh
-echo "DRIVE=\"$DRIVE\"" >> config.sh
+  if [ "$FIRMWARE_MODE" = "UEFI" ]; then
+    echo "📂 Creating /boot/efi and mounting boot partition..."
+    mkdir -p /mnt/boot/efi
+    mount "$BOOT_PART" /mnt/boot/efi
+  else
+    echo "📂 Creating /boot and mounting boot partition..."
+    mkdir -p /mnt/boot
+    mount "$BOOT_PART" /mnt/boot
+  fi
+
+  if [[ "$HOME_CHOICE" =~ ^[Yy]$ ]]; then
+    echo "📂 Creating /home and mounting home partition..."
+    mkdir -p /mnt/home
+    mount "$HOME_PART" /mnt/home
+  fi
+
+  # Save values to config.sh
+  echo "ROOT_PART=\"$ROOT_PART\"" >> config.sh
+  echo "BOOT_PART=\"$BOOT_PART\"" >> config.sh
+  echo "DRIVE=\"$DRIVE\"" >> config.sh
+  if [[ "$HOME_CHOICE" =~ ^[Yy]$ ]]; then
+    echo "HOME_PART=\"$HOME_PART\"" >> config.sh
+  fi
+  if [[ "$SWAP_CHOICE" =~ ^[Yy]$ ]]; then
+    echo "SWAP_PART=\"$SWAP_PART\"" >> config.sh
+  fi
+
+  echo "✅ Manual disk setup complete."
+
 
 echo "✅ Disk setup complete. Proceed to 02-base-install.sh"
