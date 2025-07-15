@@ -45,7 +45,7 @@ if [[ "$AUTOPART" == "y" ]]; then
   else
     HOME_SIZE=""
   fi
-
+  
   if [ "$FIRMWARE_MODE" = "UEFI" ]; then
     parted "$DRIVE" --script mklabel gpt
     parted "$DRIVE" --script mkpart primary fat32 1MiB 512MiB
@@ -213,7 +213,7 @@ else
 
   echo "✅ Manual disk setup complete."
 
-
+fi
 
 
 
