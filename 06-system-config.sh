@@ -47,7 +47,7 @@ if [ "$BOOTLOADER" = "grub" ]; then
   echo "💻 Installing GRUB bootloader..."
 
   if [ "$FIRMWARE_MODE" = "UEFI" ]; then
-    grub-install --target=x86_64-efi --efi-directory=/boot --bootloader-id=GRUB
+    grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=GRUB
   else
     grub-install --target=i386-pc $DRIVE
   fi
