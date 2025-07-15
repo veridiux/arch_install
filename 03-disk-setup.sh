@@ -219,26 +219,29 @@ else
 
 	  echo "🧪 Running mkfs for $fs_type on $part..." >&2
 
+	  local result=0
+
 	  case "$fs_type" in
 		ext4)
-		  mkfs.ext4 -F "$part" ;;
+		  mkfs.ext4 -F "$part" || result=$? ;;
 		xfs)
-		  mkfs.xfs -f "$part" ;;
+		  mkfs.xfs -f "$part" || result=$? ;;
 		f2fs)
-		  mkfs.f2fs -f "$part" ;;
+		  mkfs.f2fs -f "$part" || result=$? ;;
 		btrfs)
-		  mkfs.btrfs -f "$part" ;;
+		  mkfs.btrfs -f "$part" || result=$? ;;
 		*)
 		  echo "❌ Unknown filesystem type: $fs_type" >&2
 		  return 1
 		  ;;
 	  esac
 
-	  if [ $? -ne 0 ]; then
-		echo "❌ mkfs.$fs_type failed on $part" >&2
-		exit 1
+	  if [ "$result" -ne 0 ]; then
+		echo "❌ mkfs.$fs_type failed on $part (exit code $result)" >&2
+		exit $result
 	  fi
 	}
+
 
 
 
@@ -255,8 +258,8 @@ else
     read -rp "Do you want to reformat it to $FS_TYPE? [y/N]: " confirm
     if [[ "$confirm" =~ ^[Yy]$ ]]; then
       echo "Formatting root partition with $FS_TYPE..."
-      #mkfs_with_force "$FS_TYPE" "$ROOT_PART"
-	  mkfs.btrfs -f "$ROOT_PART"
+      mkfs_with_force "$FS_TYPE" "$ROOT_PART"
+	  #mkfs.btrfs -f "$ROOT_PART"
     else
       echo "Keeping existing filesystem on root partition."
     fi
