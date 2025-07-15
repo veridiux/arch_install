@@ -6,6 +6,8 @@
 DRIVE=""
 BOOT_PART=""
 ROOT_PART=""
+HOME_PART=""
+SWAP_PART=""
 SWAP_SIZE=""  # e.g., 2G
 
 # Filesystem
