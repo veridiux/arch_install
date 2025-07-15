@@ -198,12 +198,12 @@ else
     mkfs.fat -F32 "$BOOT_PART"
   else
     echo "🔍 Formatting boot partition as ext4..."
-    mkfs.ext4 "$BOOT_PART"
+    mkfs.ext4 "$BOOT_PART" -f
   fi
 
   if [[ "$HOME_CHOICE" =~ ^[Yy]$ ]]; then
     echo "🔍 Formatting home partition with $HOME_FS_TYPE..."
-    mkfs."$HOME_FS_TYPE" "$HOME_PART"
+    mkfs."$HOME_FS_TYPE" "$HOME_PART" -f
   fi
 
   if [[ "$SWAP_CHOICE" =~ ^[Yy]$ ]]; then
