@@ -18,7 +18,27 @@ echo ""
 echo "!!!! -- IF THE FOLLOWING OPTION IS USED IT WILL ERASE EVERYHTHING -- !!!!!"
 read -rp "⚙️  Use automatic partitioning? [y/n]: " AUTOPART
 
+detect_fs() {
+  local part=$1
+  blkid -o value -s TYPE "$part"
+}
 
+mkfs_with_force() {
+  local fs_type=$1
+  local part=$2
+  # Filesystems where -f is valid (like ext4, xfs, f2fs), else skip -f
+  case "$fs_type" in
+    ext4|xfs|f2fs)
+      mkfs."$fs_type" -f "$part"
+      ;;
+    btrfs)
+      mkfs.btrfs "$part"
+      ;;
+    *)
+      echo "Unknown filesystem type: $fs_type. Skipping format."
+      ;;
+  esac
+}
 
 
 
@@ -144,6 +164,8 @@ if [[ "$AUTOPART" == "y" ]]; then
 
 
 
+
+
 else
   echo "🛠 Manual partitioning selected. You will be dropped into cfdisk."
   read -rp "Press Enter to launch cfdisk..."
@@ -195,33 +217,21 @@ else
     read -rp "Swap partition (e.g., /dev/sda4): " SWAP_PART
   fi
 
-  # Helper function to mkfs with correct force flags
-  mkfs_with_force() {
-    local fs_type=$1
-    local part=$2
-
-    case "$fs_type" in
-      ext4)
-        mkfs.ext4 -F "$part"
-        ;;
-      xfs)
-        mkfs.xfs -f "$part"
-        ;;
-      btrfs)
-        mkfs.btrfs "$part"
-        ;;
-      f2fs)
-        mkfs.f2fs "$part"
-        ;;
-      *)
-        echo "Unsupported fs type '$fs_type', defaulting to mkfs.$fs_type without force flag"
-        mkfs."$fs_type" "$part"
-        ;;
-    esac
-  }
-
-  echo "🔍 Formatting root partition with $FS_TYPE..."
-  mkfs_with_force "$FS_TYPE" "$ROOT_PART"
+  # Format root partition with check
+  current_fs=$(detect_fs "$ROOT_PART")
+  if [ -n "$current_fs" ]; then
+    echo "⚠️ Root partition $ROOT_PART already has filesystem: $current_fs"
+    read -rp "Do you want to reformat it to $FS_TYPE? [y/N]: " confirm
+    if [[ "$confirm" =~ ^[Yy]$ ]]; then
+      echo "Formatting root partition with $FS_TYPE..."
+      mkfs_with_force "$FS_TYPE" "$ROOT_PART"
+    else
+      echo "Keeping existing filesystem on root partition."
+    fi
+  else
+    echo "Formatting root partition with $FS_TYPE..."
+    mkfs_with_force "$FS_TYPE" "$ROOT_PART"
+  fi
 
   if [ "$FIRMWARE_MODE" = "UEFI" ]; then
     echo "🔍 Formatting boot partition as FAT32 EFI..."
@@ -231,9 +241,22 @@ else
     mkfs.ext4 "$BOOT_PART"
   fi
 
+  # Format home partition with check
   if [[ "$HOME_CHOICE" =~ ^[Yy]$ ]]; then
-    echo "🔍 Formatting home partition with $HOME_FS_TYPE..."
-    mkfs_with_force "$HOME_FS_TYPE" "$HOME_PART"
+    current_fs=$(detect_fs "$HOME_PART")
+    if [ -n "$current_fs" ]; then
+      echo "⚠️ Home partition $HOME_PART already has filesystem: $current_fs"
+      read -rp "Do you want to reformat it to $HOME_FS_TYPE? [y/N]: " confirm
+      if [[ "$confirm" =~ ^[Yy]$ ]]; then
+        echo "Formatting home partition with $HOME_FS_TYPE..."
+        mkfs_with_force "$HOME_FS_TYPE" "$HOME_PART"
+      else
+        echo "Keeping existing filesystem on home partition."
+      fi
+    else
+      echo "Formatting home partition with $HOME_FS_TYPE..."
+      mkfs_with_force "$HOME_FS_TYPE" "$HOME_PART"
+    fi
   fi
 
   if [[ "$SWAP_CHOICE" =~ ^[Yy]$ ]]; then
@@ -274,9 +297,11 @@ else
   fi
 
   echo "✅ Manual disk setup complete."
+
 fi
 
 echo "✅ Disk setup complete. Proceed to 02-base-install.sh"
+
 
 
 fi
