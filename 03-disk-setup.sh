@@ -214,33 +214,43 @@ else
 	  local fs_type=$1
 	  local part=$2
 
-	  # Try to unmount in case it's mounted
-	  umount "$part" 2>/dev/null
+	  echo "🧪 mkfs_with_force called with fs_type=$fs_type, part=$part" >&2
 
-	  echo "🧪 Running mkfs for $fs_type on $part..." >&2
+	  echo "🔧 Attempting to unmount $part..." >&2
+	  if ! umount "$part" 2>/dev/null; then
+		echo "⚠️  Warning: $part was not mounted or failed to unmount (not fatal)" >&2
+	  fi
 
-	  local result=0
+	  echo "💾 Formatting $part as $fs_type..." >&2
 
 	  case "$fs_type" in
 		ext4)
-		  mkfs.ext4 -F "$part" || result=$? ;;
+		  echo "+ Running: mkfs.ext4 -F $part" >&2
+		  mkfs.ext4 -F "$part" ;;
 		xfs)
-		  mkfs.xfs -f "$part" || result=$? ;;
+		  echo "+ Running: mkfs.xfs -f $part" >&2
+		  mkfs.xfs -f "$part" ;;
 		f2fs)
-		  mkfs.f2fs -f "$part" || result=$? ;;
+		  echo "+ Running: mkfs.f2fs -f $part" >&2
+		  mkfs.f2fs -f "$part" ;;
 		btrfs)
-		  mkfs.btrfs -f "$part" || result=$? ;;
+		  echo "+ Running: mkfs.btrfs -f $part" >&2
+		  mkfs.btrfs -f "$part" ;;
 		*)
 		  echo "❌ Unknown filesystem type: $fs_type" >&2
 		  return 1
 		  ;;
 	  esac
 
-	  if [ "$result" -ne 0 ]; then
-		echo "❌ mkfs.$fs_type failed on $part (exit code $result)" >&2
+	  local result=$?
+	  if [ $result -ne 0 ]; then
+		echo "❌ mkfs.$fs_type failed with exit code $result on $part" >&2
 		exit $result
+	  else
+		echo "✅ mkfs.$fs_type succeeded on $part" >&2
 	  fi
-	}
+}
+
 
 
 
