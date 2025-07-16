@@ -5,7 +5,7 @@ source ./config.sh
 
 echo "🛠️ Entering chroot environment to configure system..."
 
-arch-chroot /mnt /bin/bash <<EOF
+arch-chroot /mnt /bin/bash <<'EOF'
 
 # --- Hostname ---
 echo "🖥️ Setting hostname..."
@@ -28,7 +28,7 @@ echo "KEYMAP=us" > /etc/vconsole.conf
 # --- Multilib (Optional) ---
 if [ "$ENABLE_MULTILIB" = "true" ]; then
   echo "📦 Enabling multilib repository..."
-  sed -i '/\\[multilib\\]/,/Include/ s/^#//' /etc/pacman.conf
+  sed -i '/\[multilib\]/,/Include/ s/^#//' /etc/pacman.conf
   pacman -Sy
 else
   echo "⏭️ Skipping multilib repository setup."
@@ -42,22 +42,11 @@ mkinitcpio -P
 echo "🔐 Set root password:"
 passwd
 
-
-
-
-
-
-
-
-
-
-
 # --- Bootloader ---
 echo "💻 Installing bootloader: $BOOTLOADER..."
 
 if [ "$BOOTLOADER" = "grub" ]; then
 
-  # Check for required command
   command -v grub-install >/dev/null || {
     echo "❌ grub-install not found!"
     exit 1
@@ -83,18 +72,18 @@ elif [ "$BOOTLOADER" = "systemd-boot" ]; then
 
   echo "⚙️ Installing systemd-boot..."
 
-  # Mount efivarfs if needed
+  # Ensure efivarfs is mounted
   if ! mountpoint -q /sys/firmware/efi/efivars; then
     echo "🔧 Mounting efivarfs..."
     mount -t efivarfs efivarfs /sys/firmware/efi/efivars
   fi
 
   bootctl install || {
-    echo "❌ Failed to install systemd-boot."
+    echo "❌ bootctl install failed."
     exit 1
   }
 
-  echo "📝 Creating systemd-boot loader configuration..."
+  echo "📝 Creating systemd-boot configuration..."
   mkdir -p /boot/loader/entries
 
   cat > /boot/loader/loader.conf <<LOADER
@@ -113,12 +102,24 @@ ENTRY
 
   echo "💡 Configuring UEFI boot entry..."
 
-  ESP_PART="$(findmnt -no SOURCE /boot/efi || findmnt -no SOURCE /boot)"
-  ESP_DISK="/dev/$(lsblk -no PKNAME "$ESP_PART")"
-  ESP_PART_NUM=$(echo "$ESP_PART" | sed -E 's/.*[p]?([0-9]+)$/\1/')
+  ESP_PART=$(findmnt -no SOURCE /boot/efi || findmnt -no SOURCE /boot)
+  if [[ -z "$ESP_PART" ]]; then
+    echo "❌ Could not determine ESP partition."
+    exit 1
+  fi
+
+  ESP_DISK=$(lsblk -no PKNAME "$ESP_PART" | head -n1)
+  ESP_PART_NUM=$(lsblk -no PARTNUM "$ESP_PART" | head -n1)
+
+  if [[ -z "$ESP_DISK" || -z "$ESP_PART_NUM" ]]; then
+    echo "❌ Failed to extract disk or partition number for efibootmgr."
+    echo "ESP_PART=$ESP_PART"
+    lsblk
+    exit 1
+  fi
 
   efibootmgr --create \
-    --disk "$ESP_DISK" \
+    --disk "/dev/$ESP_DISK" \
     --part "$ESP_PART_NUM" \
     --label "Linux Boot Manager" \
     --loader '\EFI\systemd\systemd-bootx64.efi' || {
@@ -126,14 +127,15 @@ ENTRY
       exit 1
     }
 
+  # (Optional) Secure /boot/efi to silence random seed warnings
+  chmod o-rwx /boot/efi || true
+
   echo "✅ systemd-boot installed and configured."
 
 else
   echo "❌ Unknown bootloader: $BOOTLOADER"
   exit 1
 fi
-
-
 
 EOF
 
