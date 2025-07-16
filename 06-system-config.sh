@@ -49,19 +49,6 @@ if [ "$BOOTLOADER" = "grub" ]; then
   if [ "$FIRMWARE_MODE" = "UEFI" ]; then
     grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=GRUB
   else
-    grub-install --target=i386-pc $DRIVE
-  fi
-
-  echo "📝 Generating GRUB config..."
-  grub-mkconfig -o /boot/grub/grub.cfg
-
-# --- Bootloader ---
-if [ "$BOOTLOADER" = "grub" ]; then
-  echo "💻 Installing GRUB bootloader..."
-
-  if [ "$FIRMWARE_MODE" = "UEFI" ]; then
-    grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=GRUB
-  else
     grub-install --target=i386-pc "$DRIVE"
   fi
 
@@ -107,7 +94,6 @@ ENTRY
 
   echo "💡 Adding UEFI boot entry manually..."
 
-  # Detect ESP (e.g., /boot/efi or /boot)
   ESP_PART="$(findmnt -no SOURCE /boot/efi || findmnt -no SOURCE /boot)"
   ESP_DISK="/dev/$(lsblk -no PKNAME "$ESP_PART")"
   ESP_PART_NUM="$(echo "$ESP_PART" | grep -o '[0-9]*$')"
@@ -125,6 +111,7 @@ else
   echo "❌ Unknown bootloader: $BOOTLOADER"
   exit 1
 fi
+
 
 echo "✅ System configuration complete."
 
