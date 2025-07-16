@@ -1,40 +1,37 @@
 #!/bin/bash
 set -e
 
-# === CONFIGURE THESE to match your setup ===
-ROOT_PART="/dev/sda2"
-EFI_PART="/dev/sda1"
-HOME_PART=""   # e.g. "/dev/sda3"
-SWAP_PART=""   # e.g. "/dev/sda4"
+DEVICES=("/dev/sda1" "/dev/sda2")
 
-# Make sure you have exited chroot before running this script!
+echo "🔍 Checking and unmounting devices..."
 
-if [[ -n "$SWAP_PART" ]]; then
-  echo "💾 Disabling swap..."
-  swapoff "$SWAP_PART" || echo "Swap already off or not active"
-fi
+for dev in "${DEVICES[@]}"; do
+  echo "➡️ Processing $dev..."
 
-echo "🔧 Unmounting /run..."
-umount /mnt/run || true
+  # Disable swap if active on device
+  if swapon --show=NAME | grep -q "^$dev$"; then
+    echo "💾 Disabling swap on $dev"
+    sudo swapoff "$dev"
+  fi
 
-echo "🔧 Unmounting /dev..."
-umount -R /mnt/dev || true
+  # Find mountpoints and unmount
+  mountpoints=$(mount | grep "^$dev " | awk '{print $3}')
+  for mp in $mountpoints; do
+    echo "📂 Unmounting $mp"
+    sudo umount "$mp" || {
+      echo "⚠️ Failed to unmount $mp"
+      exit 1
+    }
+  done
 
-echo "🔧 Unmounting /sys..."
-umount -R /mnt/sys || true
+  # Check for LVM logical volumes using this device and deactivate
+  if command -v lvs >/dev/null 2>&1; then
+    lvs --noheadings -o lv_path | grep "$dev" | while read -r lv; do
+      echo "🛑 Deactivating logical volume $lv"
+      sudo lvchange -an "$lv"
+    done
+  fi
 
-echo "🔧 Unmounting /proc..."
-umount /mnt/proc || true
+done
 
-if [[ -n "$HOME_PART" ]]; then
-  echo "🔧 Unmounting /home..."
-  umount /mnt/home || true
-fi
-
-echo "🔧 Unmounting EFI partition..."
-umount /mnt/boot/efi || true
-
-echo "🔧 Unmounting root partition..."
-umount /mnt || true
-
-echo "✅ All partitions and mounts have been unmounted."
+echo "✅ All done. You can now safely run cfdisk on /dev/sda1 and /dev/sda2."
