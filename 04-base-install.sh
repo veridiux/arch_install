@@ -1,4 +1,5 @@
 set -e
+trap 'echo "Error on line $LINENO"; exit 1' ERR
 
 source ./config.sh
 
@@ -21,11 +22,12 @@ case "$BOOTLOADER" in
     ;;
 esac
 
-# Show result
-echo "Final packages: ${DEFAULT_BASE_PACKAGES[@]}"
+# Pause here to inspect packages
+echo "⏸️  Packages after bootloader selection:"
+printf '  - %s\n' "${DEFAULT_BASE_PACKAGES[@]}"
 
-# Pause until user presses a key
-read -n 1 -rsp $'⏸️  Press any key to continue...\n'
+read -n 1 -rsp $'🔎 Press any key to continue after verifying systemd is in the list...\n'
+echo
 
 
 
