@@ -5,7 +5,7 @@ source ./config.sh
 
 echo "🛠️ Entering chroot environment to configure system..."
 
-arch-chroot /mnt /bin/bash <<'EOF'
+arch-chroot /mnt /bin/bash <<EOF
 
 # Function to detect and mount ESP
 detect_esp() {
