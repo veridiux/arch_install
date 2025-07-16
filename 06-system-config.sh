@@ -108,23 +108,38 @@ elif [ "\$BOOTLOADER" = "systemd-boot" ]; then
     exit 1
   }
 
-  echo "🔧 Creating loader.conf..."
-  mkdir -p /boot/loader
-  cat <<LOADER > /boot/loader/loader.conf
+  # Detect ESP mountpoint dynamically (inside chroot)
+  ESP_MOUNT=$(findmnt -no TARGET -S /dev/sda1)
+
+  if [ -z "$ESP_MOUNT" ]; then
+    echo "❌ ESP partition /dev/sda1 not mounted. Cannot continue."
+    exit 1
+  fi
+
+  echo "ℹ️ ESP is mounted at: $ESP_MOUNT"
+
+  # Create loader directory and entry
+  mkdir -p "$ESP_MOUNT/loader/entries"
+
+  PARTUUID=$(blkid -s PARTUUID -o value "$ROOT_PART")
+
+  cat <<ENTRY > "$ESP_MOUNT/loader/entries/arch.conf"
+  title   Arch Linux
+  linux   /vmlinuz-linux
+  initrd  /initramfs-linux.img
+  options root=PARTUUID=$PARTUUID rw
+  ENTRY
+
+  # Create loader.conf if missing
+  mkdir -p "$ESP_MOUNT/loader"
+  cat <<LOADER > "$ESP_MOUNT/loader/loader.conf"
   default arch
   timeout 3
   editor no
   LOADER
 
-  echo "🔧 Creating arch.conf..."
-  mkdir -p /boot/loader/entries
-  PARTUUID=$(blkid -s PARTUUID -o value "$ROOT_PART")
-  cat <<ENTRY > /boot/loader/entries/arch.conf
-  title   Arch Linux
-  linux   /vmlinuz-linux
-  initrd  /initramfs-linux.img
-  options root=PARTUUID=\$PARTUUID rw
-  ENTRY
+  echo "✅ systemd-boot entry created at $ESP_MOUNT/loader/entries/arch.conf"
+
 
   echo "💡 Adding UEFI boot entry manually..."
 
