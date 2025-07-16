@@ -118,7 +118,7 @@ LOADER
 
   echo "🔧 Creating arch.conf..."
   mkdir -p /boot/loader/entries
-  PARTUUID="\$(blkid -s PARTUUID -o value "\$ROOT_PART")"
+  PARTUUID=$(blkid -s PARTUUID -o value "$ROOT_PART")
   cat <<ENTRY > /boot/loader/entries/arch.conf
 title   Arch Linux
 linux   /vmlinuz-linux
