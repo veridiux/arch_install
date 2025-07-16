@@ -116,7 +116,11 @@ ENTRY
   fi
 
   ESP_DISK=$(lsblk -no PKNAME "$ESP_PART" | head -n1)
-  ESP_PART_NUM=$(lsblk -no PARTNUM "$ESP_PART" | head -n1)
+
+  # Extract partition number from ESP_PART
+  ESP_PART_BASENAME=$(basename "$ESP_PART")  # e.g., sda1
+  ESP_PART_NUM="${ESP_PART_BASENAME//[!0-9]/}"  # Strip non-digits
+
 
   if [[ -z "$ESP_DISK" || -z "$ESP_PART_NUM" ]]; then
     echo "❌ Failed to extract disk or partition number for efibootmgr."
