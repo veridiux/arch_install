@@ -6,7 +6,38 @@ source ./config.sh
 echo "📦 Installing Arch base system..."
 
 # Ask user to confirm or modify base packages
-DEFAULT_BASE_PACKAGES=("base" "linux" "linux-firmware" "vim" "nano" "networkmanager" "sudo" "grub" "efibootmgr")
+DEFAULT_BASE_PACKAGES=("base" "linux" "linux-firmware" "vim" "nano" "networkmanager" "sudo")
+
+
+#!/bin/bash
+
+# Source the config file
+source ./config.cfg
+
+# Default packages
+DEFAULT_BASE_PACKAGES=("base" "linux" "linux-firmware" "vim" "nano" "networkmanager" "sudo")
+
+# Set bootloader package based on config
+case "$BOOTLOADER" in
+  grub)
+    DEFAULT_BASE_PACKAGES+=("grub" "efibootmgr")
+    ;;
+  systemd-boot|systems)
+    DEFAULT_BASE_PACKAGES+=("systemd-boot" "efibootmgr")  # or "bootctl" if installing manually
+    ;;
+  *)
+    echo "Unknown BOOTLOADER: $BOOTLOADER"
+    exit 1
+    ;;
+esac
+
+# Show result
+echo "Final packages: ${DEFAULT_BASE_PACKAGES[@]}"
+
+
+
+
+
 
 echo "🧱 Default base packages:"
 printf '  - %s\n' "${DEFAULT_BASE_PACKAGES[@]}"
