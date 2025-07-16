@@ -42,81 +42,97 @@ mkinitcpio -P
 echo "🔐 Set root password:"
 passwd
 
+
+
+
+
+
+
+
+
+
+
 # --- Bootloader ---
+echo "💻 Installing bootloader: $BOOTLOADER..."
+
 if [ "$BOOTLOADER" = "grub" ]; then
-  echo "💻 Installing GRUB bootloader..."
+
+  # Check for required command
+  command -v grub-install >/dev/null || {
+    echo "❌ grub-install not found!"
+    exit 1
+  }
 
   if [ "$FIRMWARE_MODE" = "UEFI" ]; then
+    echo "🔧 Installing GRUB for UEFI..."
     grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=GRUB
   else
+    echo "🔧 Installing GRUB for BIOS..."
     grub-install --target=i386-pc "$DRIVE"
   fi
 
-  echo "📝 Generating GRUB config..."
+  echo "📝 Generating GRUB configuration..."
   grub-mkconfig -o /boot/grub/grub.cfg
 
 elif [ "$BOOTLOADER" = "systemd-boot" ]; then
+
   if [ "$FIRMWARE_MODE" != "UEFI" ] || [ ! -d /sys/firmware/efi ]; then
     echo "❌ systemd-boot is only supported on UEFI systems."
     exit 1
   fi
 
-  echo "⚙️ Installing systemd-boot bootloader..."
+  echo "⚙️ Installing systemd-boot..."
 
-  # Ensure efivars is mounted
+  # Mount efivarfs if needed
   if ! mountpoint -q /sys/firmware/efi/efivars; then
     echo "🔧 Mounting efivarfs..."
     mount -t efivarfs efivarfs /sys/firmware/efi/efivars
   fi
 
   bootctl install || {
-    echo "❌ bootctl install failed."
+    echo "❌ Failed to install systemd-boot."
     exit 1
   }
 
-  echo "🔧 Creating loader.conf..."
-  mkdir -p /boot/loader
-  cat <<LOADER > /boot/loader/loader.conf
+  echo "📝 Creating systemd-boot loader configuration..."
+  mkdir -p /boot/loader/entries
+
+  cat > /boot/loader/loader.conf <<LOADER
 default arch
 timeout 3
 editor no
 LOADER
 
-  echo "🔧 Creating arch.conf..."
-  mkdir -p /boot/loader/entries
   PARTUUID="$(blkid -s PARTUUID -o value "$ROOT_PART")"
-  cat <<ENTRY > /boot/loader/entries/arch.conf
+  cat > /boot/loader/entries/arch.conf <<ENTRY
 title   Arch Linux
 linux   /vmlinuz-linux
 initrd  /initramfs-linux.img
 options root=PARTUUID=$PARTUUID rw
 ENTRY
 
-  echo "💡 Adding UEFI boot entry manually..."
+  echo "💡 Configuring UEFI boot entry..."
 
-ESP_PART="$(findmnt -no SOURCE /boot/efi || findmnt -no SOURCE /boot)"
-ESP_DISK="/dev/$(lsblk -no PKNAME "$ESP_PART")"
+  ESP_PART="$(findmnt -no SOURCE /boot/efi || findmnt -no SOURCE /boot)"
+  ESP_DISK="/dev/$(lsblk -no PKNAME "$ESP_PART")"
+  ESP_PART_NUM=$(echo "$ESP_PART" | sed -E 's/.*[p]?([0-9]+)$/\1/')
 
-# Extract partition number robustly
-ESP_PART_NUM=$(echo "$ESP_PART" | sed -E 's/.*[p]?([0-9]+)$/\1/')
+  efibootmgr --create \
+    --disk "$ESP_DISK" \
+    --part "$ESP_PART_NUM" \
+    --label "Linux Boot Manager" \
+    --loader '\EFI\systemd\systemd-bootx64.efi' || {
+      echo "❌ efibootmgr failed to create boot entry."
+      exit 1
+    }
 
-echo "ESP_PART = $ESP_PART"
-echo "ESP_DISK = $ESP_DISK"
-echo "ESP_PART_NUM = $ESP_PART_NUM"
-
-efibootmgr --create --disk "$ESP_DISK" --part "$ESP_PART_NUM" \
-  --label "Linux Boot Manager" \
-  --loader '\EFI\systemd\systemd-bootx64.efi' || {
-    echo "❌ Failed to create UEFI boot entry with efibootmgr."
-    exit 1
-  }
-
-  echo "✅ systemd-boot installed and UEFI entry created."
+  echo "✅ systemd-boot installed and configured."
 
 else
   echo "❌ Unknown bootloader: $BOOTLOADER"
   exit 1
 fi
+
 
 
 EOF
