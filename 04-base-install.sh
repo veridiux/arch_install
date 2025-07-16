@@ -14,7 +14,7 @@ case "$BOOTLOADER" in
     DEFAULT_BASE_PACKAGES+=("grub" "efibootmgr")
     ;;
   systemd-boot|systems)
-    DEFAULT_BASE_PACKAGES+=("systemd-boot" "efibootmgr")  # or "bootctl" if installing manually
+    DEFAULT_BASE_PACKAGES+=("systemd" "efibootmgr")  # or "bootctl" if installing manually
     ;;
   *)
     echo "Unknown BOOTLOADER: $BOOTLOADER"
