@@ -126,7 +126,12 @@ ENTRY
 
   echo "💡 Adding UEFI boot entry manually..."
 
-  ESP_PART=\$(detect_esp) || exit 1
+  ESP_PART=$(detect_esp)
+  if [ -z "$ESP_PART" ]; then
+    echo "❌ detect_esp failed or returned empty result. Cannot continue."
+    exit 1
+  fi
+
 
   ESP_DISK="/dev/\$(lsblk -no PKNAME \"\$ESP_PART\")"
 
