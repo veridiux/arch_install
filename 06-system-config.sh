@@ -5,7 +5,39 @@ source ./config.sh
 
 echo "🛠️ Entering chroot environment to configure system..."
 
-arch-chroot /mnt /bin/bash <<EOF
+arch-chroot /mnt /bin/bash <<'EOF'
+
+# Function to detect and mount ESP
+detect_esp() {
+  local esp_part
+  esp_part="$(findmnt -no SOURCE /boot/efi 2>/dev/null || true)"
+
+  if [ -z "$esp_part" ]; then
+    echo "⚠️ /boot/efi not mounted. Attempting to find ESP partition..."
+
+    esp_part=$(blkid -t PARTTYPE="c12a7328-f81f-11d2-ba4b-00a0c93ec93b" -o device | head -n1)
+
+    if [ -z "$esp_part" ]; then
+      esp_part=$(blkid -L EFI || blkid -L ESP || true)
+    fi
+
+    if [ -z "$esp_part" ]; then
+      echo "❌ Could not detect ESP partition automatically."
+      return 1
+    fi
+
+    if ! mountpoint -q /boot/efi; then
+      echo "🔧 Mounting ESP partition $esp_part at /boot/efi..."
+      mkdir -p /boot/efi
+      mount "$esp_part" /boot/efi || {
+        echo "❌ Failed to mount ESP partition."
+        return 1
+      }
+    fi
+  fi
+
+  echo "$esp_part"
+}
 
 # --- Hostname ---
 echo "🖥️ Setting hostname..."
@@ -28,7 +60,7 @@ echo "KEYMAP=us" > /etc/vconsole.conf
 # --- Multilib (Optional) ---
 if [ "$ENABLE_MULTILIB" = "true" ]; then
   echo "📦 Enabling multilib repository..."
-  sed -i '/\\[multilib\\]/,/Include/ s/^#//' /etc/pacman.conf
+  sed -i '/\[multilib\]/,/Include/ s/^#//' /etc/pacman.conf
   pacman -Sy
 else
   echo "⏭️ Skipping multilib repository setup."
@@ -94,22 +126,32 @@ ENTRY
 
   echo "💡 Adding UEFI boot entry manually..."
 
-ESP_PART="$(findmnt -no SOURCE /boot/efi || findmnt -no SOURCE /boot)"
-ESP_DISK="/dev/$(lsblk -no PKNAME "$ESP_PART")"
+  ESP_PART=\$(detect_esp) || exit 1
 
-# Extract partition number robustly
-ESP_PART_NUM=$(echo "$ESP_PART" | sed -E 's/.*[p]?([0-9]+)$/\1/')
+  ESP_DISK="/dev/\$(lsblk -no PKNAME \"\$ESP_PART\")"
 
-echo "ESP_PART = $ESP_PART"
-echo "ESP_DISK = $ESP_DISK"
-echo "ESP_PART_NUM = $ESP_PART_NUM"
-
-efibootmgr --create --disk "$ESP_DISK" --part "$ESP_PART_NUM" \
-  --label "Linux Boot Manager" \
-  --loader '\EFI\systemd\systemd-bootx64.efi' || {
-    echo "❌ Failed to create UEFI boot entry with efibootmgr."
+  if [ -z "\$ESP_DISK" ]; then
+    echo "❌ Could not determine disk for ESP partition: \$ESP_PART"
     exit 1
-  }
+  fi
+
+  ESP_PART_NUM=\$(echo "\$ESP_PART" | sed -E 's/.*[p]?([0-9]+)$/\1/')
+
+  if ! [[ "\$ESP_PART_NUM" =~ ^[0-9]+$ ]]; then
+    echo "❌ Could not extract partition number from \$ESP_PART"
+    exit 1
+  fi
+
+  echo "ESP_PART = \$ESP_PART"
+  echo "ESP_DISK = \$ESP_DISK"
+  echo "ESP_PART_NUM = \$ESP_PART_NUM"
+
+  efibootmgr --create --disk "\$ESP_DISK" --part "\$ESP_PART_NUM" \
+    --label "Linux Boot Manager" \
+    --loader '\\EFI\\systemd\\systemd-bootx64.efi' || {
+      echo "❌ Failed to create UEFI boot entry with efibootmgr."
+      exit 1
+    }
 
   echo "✅ systemd-boot installed and UEFI entry created."
 
@@ -117,7 +159,6 @@ else
   echo "❌ Unknown bootloader: $BOOTLOADER"
   exit 1
 fi
-
 
 EOF
 
