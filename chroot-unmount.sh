@@ -3,7 +3,7 @@ set -e
 
 DEVICES=("/dev/sda1" "/dev/sda2")
 
-echo "🔍 Checking and unmounting devices..."
+echo "🔍 Attempting to free devices..."
 
 for dev in "${DEVICES[@]}"; do
   echo "➡️ Processing $dev..."
@@ -14,24 +14,30 @@ for dev in "${DEVICES[@]}"; do
     sudo swapoff "$dev"
   fi
 
-  # Find mountpoints and unmount
-  mountpoints=$(mount | grep "^$dev " | awk '{print $3}')
+  # Find and unmount all mount points on this device (recursively)
+  mountpoints=$(mount | grep "^$dev " | awk '{print $3}' | sort -r)
   for mp in $mountpoints; do
     echo "📂 Unmounting $mp"
-    sudo umount "$mp" || {
+    sudo umount -Rl "$mp" || {
       echo "⚠️ Failed to unmount $mp"
-      exit 1
     }
   done
 
-  # Check for LVM logical volumes using this device and deactivate
+  # Kill any process using the device
+  pids=$(lsof "$dev" 2>/dev/null | awk 'NR>1 {print $2}' | sort -u)
+  if [[ -n "$pids" ]]; then
+    echo "🛑 Killing processes using $dev: $pids"
+    sudo kill -9 $pids || true
+  fi
+
+  # Deactivate any LVM logical volumes using this device
   if command -v lvs >/dev/null 2>&1; then
     lvs --noheadings -o lv_path | grep "$dev" | while read -r lv; do
-      echo "🛑 Deactivating logical volume $lv"
-      sudo lvchange -an "$lv"
+      echo "🔧 Deactivating logical volume $lv"
+      sudo lvchange -an "$lv" || true
     done
   fi
 
 done
 
-echo "✅ All done. You can now safely run cfdisk on /dev/sda1 and /dev/sda2."
+echo "✅ Cleanup complete. Try cfdisk again."
