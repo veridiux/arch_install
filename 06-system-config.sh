@@ -94,16 +94,22 @@ ENTRY
 
   echo "💡 Adding UEFI boot entry manually..."
 
-  ESP_PART="$(findmnt -no SOURCE /boot/efi || findmnt -no SOURCE /boot)"
-  ESP_DISK="/dev/$(lsblk -no PKNAME "$ESP_PART")"
-  ESP_PART_NUM="$(echo "$ESP_PART" | grep -o '[0-9]*$')"
+ESP_PART="$(findmnt -no SOURCE /boot/efi || findmnt -no SOURCE /boot)"
+ESP_DISK="/dev/$(lsblk -no PKNAME "$ESP_PART")"
 
-  efibootmgr --create --disk "$ESP_DISK" --part "$ESP_PART_NUM" \
-    --label "Linux Boot Manager" \
-    --loader '\EFI\systemd\systemd-bootx64.efi' || {
-      echo "❌ Failed to create UEFI boot entry with efibootmgr."
-      exit 1
-    }
+# Extract partition number robustly
+ESP_PART_NUM=$(echo "$ESP_PART" | sed -E 's/.*[p]?([0-9]+)$/\1/')
+
+echo "ESP_PART = $ESP_PART"
+echo "ESP_DISK = $ESP_DISK"
+echo "ESP_PART_NUM = $ESP_PART_NUM"
+
+efibootmgr --create --disk "$ESP_DISK" --part "$ESP_PART_NUM" \
+  --label "Linux Boot Manager" \
+  --loader '\EFI\systemd\systemd-bootx64.efi' || {
+    echo "❌ Failed to create UEFI boot entry with efibootmgr."
+    exit 1
+  }
 
   echo "✅ systemd-boot installed and UEFI entry created."
 
@@ -111,9 +117,6 @@ else
   echo "❌ Unknown bootloader: $BOOTLOADER"
   exit 1
 fi
-
-
-echo "✅ System configuration complete."
 
 
 EOF
