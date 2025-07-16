@@ -1,4 +1,3 @@
-#!/bin/bash
 set -e
 
 source ./config.sh
@@ -24,6 +23,9 @@ esac
 
 # Show result
 echo "Final packages: ${DEFAULT_BASE_PACKAGES[@]}"
+
+# Pause until user presses a key
+read -n 1 -rsp $'⏸️  Press any key to continue...\n'
 
 
 
