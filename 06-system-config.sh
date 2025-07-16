@@ -55,14 +55,37 @@ if [ "$BOOTLOADER" = "grub" ]; then
   echo "📝 Generating GRUB config..."
   grub-mkconfig -o /boot/grub/grub.cfg
 
+# --- Bootloader ---
+if [ "$BOOTLOADER" = "grub" ]; then
+  echo "💻 Installing GRUB bootloader..."
+
+  if [ "$FIRMWARE_MODE" = "UEFI" ]; then
+    grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=GRUB
+  else
+    grub-install --target=i386-pc "$DRIVE"
+  fi
+
+  echo "📝 Generating GRUB config..."
+  grub-mkconfig -o /boot/grub/grub.cfg
+
 elif [ "$BOOTLOADER" = "systemd-boot" ]; then
-  if [ "$FIRMWARE_MODE" != "UEFI" ]; then
+  if [ "$FIRMWARE_MODE" != "UEFI" ] || [ ! -d /sys/firmware/efi ]; then
     echo "❌ systemd-boot is only supported on UEFI systems."
     exit 1
   fi
 
   echo "⚙️ Installing systemd-boot bootloader..."
-  bootctl install
+
+  # Ensure efivars is mounted
+  if ! mountpoint -q /sys/firmware/efi/efivars; then
+    echo "🔧 Mounting efivarfs..."
+    mount -t efivarfs efivarfs /sys/firmware/efi/efivars
+  fi
+
+  bootctl install || {
+    echo "❌ bootctl install failed."
+    exit 1
+  }
 
   echo "🔧 Creating loader.conf..."
   mkdir -p /boot/loader
@@ -74,18 +97,37 @@ LOADER
 
   echo "🔧 Creating arch.conf..."
   mkdir -p /boot/loader/entries
-  PARTUUID=\$(blkid -s PARTUUID -o value $ROOT_PART)
+  PARTUUID="$(blkid -s PARTUUID -o value "$ROOT_PART")"
   cat <<ENTRY > /boot/loader/entries/arch.conf
 title   Arch Linux
 linux   /vmlinuz-linux
 initrd  /initramfs-linux.img
-options root=PARTUUID=\$PARTUUID rw
+options root=PARTUUID=$PARTUUID rw
 ENTRY
 
+  echo "💡 Adding UEFI boot entry manually..."
+
+  # Detect ESP (e.g., /boot/efi or /boot)
+  ESP_PART="$(findmnt -no SOURCE /boot/efi || findmnt -no SOURCE /boot)"
+  ESP_DISK="/dev/$(lsblk -no PKNAME "$ESP_PART")"
+  ESP_PART_NUM="$(echo "$ESP_PART" | grep -o '[0-9]*$')"
+
+  efibootmgr --create --disk "$ESP_DISK" --part "$ESP_PART_NUM" \
+    --label "Linux Boot Manager" \
+    --loader '\EFI\systemd\systemd-bootx64.efi' || {
+      echo "❌ Failed to create UEFI boot entry with efibootmgr."
+      exit 1
+    }
+
+  echo "✅ systemd-boot installed and UEFI entry created."
+
 else
-  echo "❌ Unknown bootloader: \$BOOTLOADER"
+  echo "❌ Unknown bootloader: $BOOTLOADER"
   exit 1
 fi
+
+echo "✅ System configuration complete."
+
 
 EOF
 
