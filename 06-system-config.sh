@@ -1,9 +1,16 @@
 #!/bin/bash
 set -e
 
+# Load your config variables (ROOT_PART, HOSTNAME, TIMEZONE, LOCALE, ENABLE_MULTILIB, BOOTLOADER, FIRMWARE_MODE, DRIVE)
 source ./config.sh
 
+# Export variables so they are available inside the heredoc in arch-chroot
+export ROOT_PART HOSTNAME TIMEZONE LOCALE ENABLE_MULTILIB BOOTLOADER FIRMWARE_MODE DRIVE
+
 echo "🛠️ Entering chroot environment to configure system..."
+
+
+
 
 arch-chroot /mnt /bin/bash <<'EOF'
 
