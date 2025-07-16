@@ -3,6 +3,7 @@
 # Load this in every module with: source config.sh
 
 # Device & mount point
+
 DRIVE=""
 BOOT_PART=""
 ROOT_PART=""
