@@ -148,8 +148,6 @@ if [[ "$AUTOPART" == "y" ]]; then
   [[ -n "$SWAP_PART" ]] && echo "SWAP_PART=\"$SWAP_PART\"" >> config.sh
   [[ -n "$BIOS_GRUB_PART" ]] && echo "BIOS_GRUB_PART=\"$BIOS_GRUB_PART\"" >> config.sh
 
-  echo "✅ Partitioning and mounting complete. Ready for base installation."
-fi
 
 
 
