@@ -84,6 +84,10 @@ if [[ "$AUTOPART" == "y" ]]; then
     fi
   fi
 
+
+
+
+
   # Optional HOME partition
   if [[ -n "$HOME_SIZE" ]]; then
     parted "$DRIVE" --script mkpart primary ext4 "${start_after_boot}MiB" "$((start_after_boot + HOME_SIZE_GB * 1024))MiB"
@@ -96,14 +100,32 @@ if [[ "$AUTOPART" == "y" ]]; then
 
   # Optional SWAP
   if [[ -n "$SWAP_SIZE" ]]; then
-    parted "$DRIVE" --script mkpart primary linux-swap "-$SWAP_SIZE" 100%
-    SWAP_PART="${DRIVE}${next_part}"
-    parted "$DRIVE" --script mkpart primary ext4 "${start_after_home}MiB" "-$SWAP_SIZE"
-    ROOT_PART="${DRIVE}$((next_part + 1))"
-  else
-    parted "$DRIVE" --script mkpart primary ext4 "${start_after_home}MiB" 100%
-    ROOT_PART="${DRIVE}${next_part}"
-  fi
+  # Calculate swap size in MiB
+  SWAP_SIZE_MIB=$((SWAP_SIZE * 1024))
+  
+  # Calculate swap start and end
+  SWAP_START=${start_after_home}
+  SWAP_END=$((SWAP_START + SWAP_SIZE_MIB))
+  
+  # Create swap partition
+  parted "$DRIVE" --script mkpart primary linux-swap "${SWAP_START}MiB" "${SWAP_END}MiB"
+  SWAP_PART="${DRIVE}${next_part}"
+  next_part=$((next_part + 1))
+  
+  # Create root partition from end of swap to 100%
+  parted "$DRIVE" --script mkpart primary ext4 "${SWAP_END}MiB" 100%
+  ROOT_PART="${DRIVE}${next_part}"
+else
+  # No swap, root partition from start_after_home to 100%
+  parted "$DRIVE" --script mkpart primary ext4 "${start_after_home}MiB" 100%
+  ROOT_PART="${DRIVE}${next_part}"
+fi
+
+
+
+
+
+
 
   # Format partitions
   echo "🧽 Formatting partitions..."
