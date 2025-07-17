@@ -165,7 +165,12 @@ fi
 
 
 
-
+  detect_fs() {
+	  local part=$1
+	  local fs=$(blkid -o value -s TYPE "$part")
+	  echo "Detected filesystem on $part: $fs" >&2  # Debug log
+	  echo "$fs"
+	}
 
 
 
