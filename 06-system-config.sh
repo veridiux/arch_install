@@ -100,7 +100,7 @@ editor no
 LOADER
 
   PARTUUID="$(blkid -s PARTUUID -o value "$ROOT_PART")"
-  cat > /boot/efi/loader/entries/arch.conf <<ENTRY
+  cat > /boot/loader/entries/arch.conf <<ENTRY
 title   Arch Linux
 linux   /vmlinuz-linux
 initrd  /initramfs-linux.img
