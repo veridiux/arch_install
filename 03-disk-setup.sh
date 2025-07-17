@@ -39,6 +39,48 @@ if [[ "$AUTOPART" == "y" ]]; then
   echo "💣 Wiping $DRIVE and creating new partitions..."
   wipefs -af "$DRIVE"
 
+  # Prompt for root filesystem type
+  echo "Choose filesystem type for root partition:"
+  echo "1) ext4"
+  echo "2) btrfs"
+  echo "3) xfs"
+  echo "4) f2fs"
+  read -rp "Enter number [1-4]: " FS_CHOICE
+
+  case "$FS_CHOICE" in
+    1) FS_TYPE="ext4" ;;
+    2) FS_TYPE="btrfs" ;;
+    3) FS_TYPE="xfs" ;;
+    4) FS_TYPE="f2fs" ;;
+    *) echo "Invalid choice, defaulting to ext4"; FS_TYPE="ext4" ;;
+  esac
+
+  read -rp "⚙️  Would you like to use a separate HOME partition? [y/n]: " HOME_CHOICE
+  if [[ "$HOME_CHOICE" =~ ^[Yy]$ ]]; then
+    read -rp "Home partition (e.g., /dev/sda3): " HOME_PART
+
+    # Prompt for home filesystem type
+    echo "Choose filesystem type for home partition:"
+    echo "1) ext4"
+    echo "2) btrfs"
+    echo "3) xfs"
+    echo "4) f2fs"
+    read -rp "Enter number [1-4]: " HOME_FS_CHOICE
+
+    case "$HOME_FS_CHOICE" in
+      1) HOME_FS_TYPE="ext4" ;;
+      2) HOME_FS_TYPE="btrfs" ;;
+      3) HOME_FS_TYPE="xfs" ;;
+      4) HOME_FS_TYPE="f2fs" ;;
+      *) echo "Invalid choice, defaulting to ext4"; HOME_FS_TYPE="ext4" ;;
+    esac
+  fi
+
+  read -rp "⚙️  Would you like to use a SWAP partition? [y/n]: " SWAP_CHOICE
+  if [[ "$SWAP_CHOICE" =~ ^[Yy]$ ]]; then
+    read -rp "Swap partition (e.g., /dev/sda4): " SWAP_PART
+  fi
+
   # Ask about swap
   read -rp "Do you want a swap partition? [y/n]: " SWAP_CHOICE
   if [[ "$SWAP_CHOICE" == "y" ]]; then
@@ -90,13 +132,21 @@ if [[ "$AUTOPART" == "y" ]]; then
 
   # Optional HOME partition
   if [[ -n "$HOME_SIZE" ]]; then
-    parted "$DRIVE" --script mkpart primary ext4 "${start_after_boot}MiB" "$((start_after_boot + HOME_SIZE_GB * 1024))MiB"
-    HOME_PART="${DRIVE}${next_part}"
-    start_after_home=$((start_after_boot + HOME_SIZE_GB * 1024))
-    next_part=$((next_part + 1))
-  else
-    start_after_home=$start_after_boot
-  fi
+  # Calculate home partition end in MiB
+  HOME_START=${start_after_boot}
+  HOME_END=$((HOME_START + HOME_SIZE_GB * 1024))
+  
+  # Create home partition
+  parted "$DRIVE" --script mkpart primary ext4 "${HOME_START}MiB" "${HOME_END}MiB"
+  HOME_PART="${DRIVE}${next_part}"
+  
+  # Update pointers for next partition start and partition number
+  start_after_home=${HOME_END}
+  next_part=$((next_part + 1))
+else
+  start_after_home=${start_after_boot}
+fi
+
 
   # Optional SWAP
   if [[ -n "$SWAP_SIZE" ]]; then
@@ -127,17 +177,101 @@ fi
 
 
 
-  # Format partitions
-  echo "🧽 Formatting partitions..."
-  mkfs.ext4 "$ROOT_PART"
-  [[ -n "$HOME_PART" ]] && mkfs.ext4 "$HOME_PART"
-  [[ -n "$SWAP_PART" ]] && mkswap "$SWAP_PART" && swapon "$SWAP_PART"
+  mkfs_with_force() {
+	  local fs_type=$1
+	  local part=$2
 
-  if [[ "$FIRMWARE_MODE" == "UEFI" ]]; then
+	  echo "🧪 mkfs_with_force called with fs_type=$fs_type, part=$part" >&2
+
+	  echo "🔧 Attempting to unmount $part..." >&2
+	  if ! umount "$part" 2>/dev/null; then
+		echo "⚠️  Warning: $part was not mounted or failed to unmount (not fatal)" >&2
+	  fi
+
+	  echo "💾 Formatting $part as $fs_type..." >&2
+
+	  case "$fs_type" in
+		ext4)
+		  echo "+ Running: mkfs.ext4 -F $part" >&2
+		  mkfs.ext4 -F "$part" ;;
+		xfs)
+		  echo "+ Running: mkfs.xfs -f $part" >&2
+		  mkfs.xfs -f "$part" ;;
+		f2fs)
+		  echo "+ Running: mkfs.f2fs -f $part" >&2
+		  mkfs.f2fs -f "$part" ;;
+		btrfs)
+		  echo "+ Running: mkfs.btrfs -f $part" >&2
+		  mkfs.btrfs -f "$part" ;;
+		*)
+		  echo "❌ Unknown filesystem type: $fs_type" >&2
+		  return 1
+		  ;;
+	  esac
+
+	  local result=$?
+	  if [ $result -ne 0 ]; then
+		echo "❌ mkfs.$fs_type failed with exit code $result on $part" >&2
+		exit $result
+	  else
+		echo "✅ mkfs.$fs_type succeeded on $part" >&2
+	  fi
+	}
+  
+  # Format root partition with check
+  current_fs=$(detect_fs "$ROOT_PART")
+  if [ -n "$current_fs" ]; then
+    echo "⚠️ Root partition $ROOT_PART already has filesystem: $current_fs"
+    read -rp "Do you want to reformat it to $FS_TYPE? [y/N]: " confirm
+    if [[ "$confirm" =~ ^[Yy]$ ]]; then
+      echo "Formatting root partition with $FS_TYPE..."
+      mkfs_with_force "$FS_TYPE" "$ROOT_PART"
+	  #mkfs.btrfs -f "$ROOT_PART"
+    else
+      echo "Keeping existing filesystem on root partition."
+    fi
+  else
+    echo "Formatting root partition with $FS_TYPE...X"
+    mkfs_with_force "$FS_TYPE" "$ROOT_PART"
+  fi
+
+  if [ "$FIRMWARE_MODE" = "UEFI" ]; then
+    echo "🔍 Formatting boot partition as FAT32 EFI..."
     mkfs.fat -F32 "$BOOT_PART"
   else
+    echo "🔍 Formatting boot partition as ext4..."
     mkfs.ext4 "$BOOT_PART"
   fi
+
+  # Format home partition with check
+  if [[ "$HOME_CHOICE" =~ ^[Yy]$ ]]; then
+    current_fs=$(detect_fs "$HOME_PART")
+    if [ -n "$current_fs" ]; then
+      echo "⚠️ Home partition $HOME_PART already has filesystem: $current_fs"
+      read -rp "Do you want to reformat it to $HOME_FS_TYPE? [y/N]: " confirm
+      if [[ "$confirm" =~ ^[Yy]$ ]]; then
+        echo "Formatting home partition with $HOME_FS_TYPE..."
+        mkfs_with_force "$HOME_FS_TYPE" "$HOME_PART"
+      else
+        echo "Keeping existing filesystem on home partition."
+      fi
+    else
+      echo "Formatting home partition with $HOME_FS_TYPE..."
+      mkfs_with_force "$HOME_FS_TYPE" "$HOME_PART"
+    fi
+  fi
+
+
+
+
+
+
+
+
+
+
+
+
 
   # Mount partitions
   echo "📂 Mounting partitions..."
