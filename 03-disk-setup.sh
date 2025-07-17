@@ -32,6 +32,19 @@ read -rp "⚙️  Use automatic partitioning? [y/n]: " AUTOPART
 
 # Assume variables $DRIVE, $AUTOPART, and $FIRMWARE_MODE are already set externally
 
+
+
+list_other_drives() {
+  local exclude_drive="$1"
+  echo "Available drives (excluding $exclude_drive):"
+  lsblk -dno NAME,SIZE | while read -r dev size; do
+    if [[ "/dev/$dev" != "$exclude_drive" ]]; then
+      echo "  /dev/$dev - $size"
+    fi
+  done
+}
+
+
 if [[ "$AUTOPART" == "y" ]]; then
   echo "🔍 Detecting current partition table on $DRIVE..."
   PTTYPE=$(parted -s "$DRIVE" print 2>/dev/null | grep 'Partition Table' | awk '{print $3}')
@@ -63,7 +76,7 @@ if [[ "$AUTOPART" == "y" ]]; then
     SWAP_SIZE="${SWAP_SIZE_GB}"
   fi
 
-  
+
   # Ask about /home on a separate drive
   read -rp "Do you want to use a different drive for /home? [y/n]: " USE_SEPARATE_HOME_DRIVE
   if [[ "$USE_SEPARATE_HOME_DRIVE" == "y" ]]; then
