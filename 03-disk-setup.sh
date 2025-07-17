@@ -84,7 +84,7 @@ if [[ "$AUTOPART" == "y" ]]; then
     4) HOME_FS_TYPE="f2fs" ;;
     *) echo "Invalid choice, defaulting to ext4"; HOME_FS_TYPE="ext4" ;;
   esac
-fi
+
   fi
 
   if [[ "$FIRMWARE_MODE" == "UEFI" ]]; then
@@ -135,9 +135,9 @@ fi
   # Update pointers for next partition start and partition number
   start_after_home=${HOME_END}
   next_part=$((next_part + 1))
-else
+  else
   start_after_home=${start_after_boot}
-fi
+  fi
 
 
   # Optional SWAP
@@ -157,11 +157,11 @@ fi
   # Create root partition from end of swap to 100%
   parted "$DRIVE" --script mkpart primary ext4 "${SWAP_END}MiB" 100%
   ROOT_PART="${DRIVE}${next_part}"
-else
+  else
   # No swap, root partition from start_after_home to 100%
   parted "$DRIVE" --script mkpart primary ext4 "${start_after_home}MiB" 100%
   ROOT_PART="${DRIVE}${next_part}"
-fi
+  fi
 
 
 
