@@ -55,31 +55,6 @@ if [[ "$AUTOPART" == "y" ]]; then
     *) echo "Invalid choice, defaulting to ext4"; FS_TYPE="ext4" ;;
   esac
 
-  read -rp "⚙️  Would you like to use a separate HOME partition? [y/n]: " HOME_CHOICE
-  if [[ "$HOME_CHOICE" =~ ^[Yy]$ ]]; then
-    read -rp "Home partition (e.g., /dev/sda3): " HOME_PART
-
-    # Prompt for home filesystem type
-    echo "Choose filesystem type for home partition:"
-    echo "1) ext4"
-    echo "2) btrfs"
-    echo "3) xfs"
-    echo "4) f2fs"
-    read -rp "Enter number [1-4]: " HOME_FS_CHOICE
-
-    case "$HOME_FS_CHOICE" in
-      1) HOME_FS_TYPE="ext4" ;;
-      2) HOME_FS_TYPE="btrfs" ;;
-      3) HOME_FS_TYPE="xfs" ;;
-      4) HOME_FS_TYPE="f2fs" ;;
-      *) echo "Invalid choice, defaulting to ext4"; HOME_FS_TYPE="ext4" ;;
-    esac
-  fi
-
-  read -rp "⚙️  Would you like to use a SWAP partition? [y/n]: " SWAP_CHOICE
-  if [[ "$SWAP_CHOICE" =~ ^[Yy]$ ]]; then
-    read -rp "Swap partition (e.g., /dev/sda4): " SWAP_PART
-  fi
 
   # Ask about swap
   read -rp "Do you want a swap partition? [y/n]: " SWAP_CHOICE
@@ -93,6 +68,23 @@ if [[ "$AUTOPART" == "y" ]]; then
   if [[ "$HOME_CHOICE" == "y" ]]; then
     read -rp "Enter /home size in GiB (e.g., 20): " HOME_SIZE_GB
     HOME_SIZE="${HOME_SIZE_GB}"
+
+    # Prompt for home filesystem type
+  echo "Choose filesystem type for home partition:"
+  echo "1) ext4"
+  echo "2) btrfs"
+  echo "3) xfs"
+  echo "4) f2fs"
+  read -rp "Enter number [1-4]: " HOME_FS_CHOICE
+
+  case "$HOME_FS_CHOICE" in
+    1) HOME_FS_TYPE="ext4" ;;
+    2) HOME_FS_TYPE="btrfs" ;;
+    3) HOME_FS_TYPE="xfs" ;;
+    4) HOME_FS_TYPE="f2fs" ;;
+    *) echo "Invalid choice, defaulting to ext4"; HOME_FS_TYPE="ext4" ;;
+  esac
+fi
   fi
 
   if [[ "$FIRMWARE_MODE" == "UEFI" ]]; then
