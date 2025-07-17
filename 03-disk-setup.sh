@@ -140,7 +140,7 @@ if [[ "$AUTOPART" == "y" ]]; then
         esac
       fi
     fi
-
+  fi
 
   if [[ "$FIRMWARE_MODE" == "UEFI" ]]; then
     echo "⚙️ UEFI mode detected – using GPT and EFI System Partition..."
