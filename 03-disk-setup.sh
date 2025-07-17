@@ -95,15 +95,17 @@ if [[ "$AUTOPART" == "y" ]]; then
   fi
 
   # Optional SWAP
+  # Optional SWAP
   if [[ -n "$SWAP_SIZE" ]]; then
-    parted "$DRIVE" --script mkpart primary linux-swap "-$SWAP_SIZE" 100%
+    parted "$DRIVE" --script mkpart primary linux-swap -$SWAP_SIZE 100%
     SWAP_PART="${DRIVE}${next_part}"
-    parted "$DRIVE" --script mkpart primary ext4 "${start_after_home}MiB" "-$SWAP_SIZE"
+    parted "$DRIVE" --script mkpart primary ext4 "${start_after_home}MiB" -$SWAP_SIZE
     ROOT_PART="${DRIVE}$((next_part + 1))"
   else
     parted "$DRIVE" --script mkpart primary ext4 "${start_after_home}MiB" 100%
     ROOT_PART="${DRIVE}${next_part}"
   fi
+
 
   # Format partitions
   echo "🧽 Formatting partitions..."
