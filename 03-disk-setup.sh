@@ -23,13 +23,6 @@ echo "!!!! -- IF THE FOLLOWING OPTION IS USED IT WILL ERASE EVERYHTHING -- !!!!!
 read -rp "⚙️  Use automatic partitioning? [y/n]: " AUTOPART
 
 
-
-
-
-
-
-#!/bin/bash
-
 # Assume variables $DRIVE, $AUTOPART, and $FIRMWARE_MODE are already set externally
 
 
@@ -99,15 +92,13 @@ if [[ "$AUTOPART" == "y" ]]; then
         esac
       read -rp "Use full drive for /home? [y/n]: " USE_FULL_HOME_DRIVE
       if [[ "$USE_FULL_HOME_DRIVE" == "y" ]]; then
-        parted "$HOME_DRIVE" --script mklabel gpt
-        parted "$HOME_DRIVE" --script mkpart primary ext4 1MiB 100%
-        HOME_PART="${HOME_DRIVE}1"
+          HOME_SIZE="${HOME_SIZE_MAX}"
+          echo "Set to use full drive for home..."
       else
-        read -rp "Enter /home size in GiB (e.g., 20): " HOME_SIZE_GB
-        HOME_SIZE="${HOME_SIZE_GB}"
-        parted "$HOME_DRIVE" --script mklabel gpt
-        parted "$HOME_DRIVE" --script mkpart primary ext4 1MiB "$((HOME_SIZE_GB * 1024))MiB"
-        HOME_PART="${HOME_DRIVE}1"
+        if [[ "$HOME_CHOICE" == "y" ]]; then
+          read -rp "Enter /home size in GiB (e.g., 20): " HOME_SIZE_GB
+          HOME_SIZE="${HOME_SIZE_GB}"
+        fi
       fi
 
     else
@@ -171,6 +162,44 @@ if [[ "$AUTOPART" == "y" ]]; then
 
 
 
+
+  # Optional HOME partition
+  if [[ -n "$HOME_SIZE" ]]; then
+    HOME_START=${start_after_boot}
+
+    if [[ "$HOME_SIZE" == "$HOME_SIZE_MAX" ]]; then
+      # Use all remaining space on the drive
+      HOME_END="100%"
+    else
+      # Calculate specific end in MiB
+      HOME_END=$((HOME_START + HOME_SIZE * 1024))
+      HOME_END="${HOME_END}MiB"
+    fi
+
+    # Create home partition
+    parted "$DRIVE" --script mkpart primary ext4 "${HOME_START}MiB" "$HOME_END"
+    HOME_PART="${DRIVE}${next_part}"
+
+    # Update pointers if size wasn't "100%"
+    if [[ "$HOME_END" != "100%" ]]; then
+      start_after_home=$((HOME_START + HOME_SIZE * 1024))
+    else
+      start_after_home=""  # Nothing expected after this
+    fi
+
+    next_part=$((next_part + 1))
+  else
+    start_after_home=${start_after_boot}
+  fi
+
+
+
+
+
+
+
+
+: <<'COMMENT'
   # Optional HOME partition
   if [[ -n "$HOME_SIZE" ]]; then
   # Calculate home partition end in MiB
@@ -187,6 +216,7 @@ if [[ "$AUTOPART" == "y" ]]; then
   else
   start_after_home=${start_after_boot}
   fi
+COMMENT
 
 
   # Optional SWAP
@@ -331,6 +361,7 @@ if [[ "$AUTOPART" == "y" ]]; then
 
   # Mount partitions
   echo "📂 Mounting partitions..."
+
   mount "$ROOT_PART" /mnt
 
   if [[ "$FIRMWARE_MODE" == "UEFI" ]]; then
