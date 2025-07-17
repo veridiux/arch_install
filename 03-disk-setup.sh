@@ -157,6 +157,12 @@ if [[ "$AUTOPART" == "y" ]]; then
   fi
 
 
+  if [[ "$USE_SEPARATE_HOME_DRIVE" =~ ^[Yy]$ ]]; then
+    parted "$HOME_DRIVE" --script mkpart primary ext4 "${HOME_START}MiB" "$HOME_END"
+    HOME_PART="${HOME_DRIVE}${next_part}"
+    read -rp "Just checking..."
+  fi
+
 
 
 
@@ -173,15 +179,17 @@ if [[ "$AUTOPART" == "y" ]]; then
       HOME_END=$((HOME_START + HOME_SIZE * 1024))
       HOME_END="${HOME_END}MiB"
     fi
+    
 
-    
-    
-    
-    
-    
+
+
     # Create home partition
     parted "$DRIVE" --script mkpart primary ext4 "${HOME_START}MiB" "$HOME_END"
     HOME_PART="${DRIVE}${next_part}"
+
+
+
+
 
     # Update pointers if size wasn't "100%"
     if [[ "$HOME_END" != "100%" ]]; then
