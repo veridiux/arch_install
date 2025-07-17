@@ -94,7 +94,6 @@ if [[ "$AUTOPART" == "y" ]]; then
       if [[ "$USE_FULL_HOME_DRIVE" == "y" ]]; then
           HOME_SIZE="${HOME_SIZE_MAX}"
           echo "Set to use full drive for home..."
-      fi
       else
         if [[ "$HOME_CHOICE" == "y" ]]; then
           read -rp "Enter /home size in GiB (e.g., 20): " HOME_SIZE_GB
