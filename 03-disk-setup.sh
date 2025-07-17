@@ -251,6 +251,12 @@ if [[ "$AUTOPART" == "y" ]]; then
   parted "$DRIVE" --script mkpart primary ext4 "${start_after_home}MiB" 100%
   ROOT_PART="${DRIVE}${next_part}"
   fi
+  read -rp "Coming soon"
+  if [[ "$USE_SEPARATE_HOME_DRIVE" =~ ^[Yy]$ ]]; then
+    parted "$HOME_DRIVE" --script mkpart primary ext4 "${HOME_START}MiB" "$HOME_END"
+    HOME_PART="${HOME_DRIVE}${next_part}"
+    read -rp "Just checking..."
+  fi
 
 
 
