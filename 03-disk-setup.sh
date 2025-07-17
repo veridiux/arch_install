@@ -179,18 +179,14 @@ if [[ "$AUTOPART" == "y" ]]; then
     
     
     
-    if [[ "$USE_HOME_PART" == true ]]; then
-      parted "$HOME_DRIVE_TO_USE" --script mkpart primary "$HOME_FS_TYPE" "${HOME_START}MiB" "$HOME_END"
-
-      # Determine the correct partition name
-      if [[ "$HOME_DRIVE_TO_USE" == "$DRIVE" ]]; then
-        HOME_PART="${DRIVE}${next_part}"
-        next_part=$((next_part + 1))
-      else
-        # Assuming first partition on other drive
-        HOME_PART="${HOME_DRIVE_TO_USE}1"
-      fi
+    if [[ "$USE_SEPARATE_HOME_DRIVE" == true ]]; then
+    parted "$HOME_DRIVE" --script mkpart primary ext4 "${HOME_START}MiB" "$HOME_END"
+      HOME_PART="${HOME_DRIVE}${next_part}"
+    else
+      parted "$DRIVE" --script mkpart primary ext4 "${HOME_START}MiB" "$HOME_END"
+      HOME_PART="${DRIVE}${next_part}"
     fi
+
 
     
     
