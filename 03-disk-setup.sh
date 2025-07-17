@@ -146,9 +146,6 @@ if [[ "$AUTOPART" == "y" ]]; then
     fi
   fi
 
-
-  fi
-
   if [[ "$FIRMWARE_MODE" == "UEFI" ]]; then
     echo "⚙️ UEFI mode detected – using GPT and EFI System Partition..."
     parted "$DRIVE" --script mklabel gpt
