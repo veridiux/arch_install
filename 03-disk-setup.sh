@@ -43,14 +43,14 @@ if [[ "$AUTOPART" == "y" ]]; then
   read -rp "Do you want a swap partition? [y/n]: " SWAP_CHOICE
   if [[ "$SWAP_CHOICE" == "y" ]]; then
     read -rp "Enter swap size in GiB (e.g., 2): " SWAP_SIZE_GB
-    SWAP_SIZE="${SWAP_SIZE_GB}GiB"
+    SWAP_SIZE="${SWAP_SIZE_GB}"
   fi
 
   # Ask about /home
   read -rp "Do you want a separate /home partition? [y/n]: " HOME_CHOICE
   if [[ "$HOME_CHOICE" == "y" ]]; then
     read -rp "Enter /home size in GiB (e.g., 20): " HOME_SIZE_GB
-    HOME_SIZE="${HOME_SIZE_GB}GiB"
+    HOME_SIZE="${HOME_SIZE_GB}"
   fi
 
   if [[ "$FIRMWARE_MODE" == "UEFI" ]]; then
@@ -95,17 +95,15 @@ if [[ "$AUTOPART" == "y" ]]; then
   fi
 
   # Optional SWAP
-  # Optional SWAP
   if [[ -n "$SWAP_SIZE" ]]; then
-    parted "$DRIVE" --script mkpart primary linux-swap -$SWAP_SIZE 100%
+    parted "$DRIVE" --script mkpart primary linux-swap "-$SWAP_SIZE" 100%
     SWAP_PART="${DRIVE}${next_part}"
-    parted "$DRIVE" --script mkpart primary ext4 "${start_after_home}MiB" -$SWAP_SIZE
+    parted "$DRIVE" --script mkpart primary ext4 "${start_after_home}MiB" "-$SWAP_SIZE"
     ROOT_PART="${DRIVE}$((next_part + 1))"
   else
     parted "$DRIVE" --script mkpart primary ext4 "${start_after_home}MiB" 100%
     ROOT_PART="${DRIVE}${next_part}"
   fi
-
 
   # Format partitions
   echo "🧽 Formatting partitions..."
