@@ -100,7 +100,7 @@ if [[ "$AUTOPART" == "y" ]]; then
           HOME_SIZE="${HOME_SIZE_GB}"
         fi
       fi
-
+    fi
     else
       # Fallback to asking if they want a separate /home partition on the main drive
       read -rp "Do you want a separate /home partition on the same drive? [y/n]: " HOME_CHOICE
