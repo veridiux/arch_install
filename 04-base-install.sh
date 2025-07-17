@@ -1,6 +1,6 @@
 #!/bin/bash
 
-read -rp "🔸 Starting script: $(basename "$0"). Press Enter to continue..."
+#read -rp "🔸 Starting script: $(basename "$0"). Press Enter to continue..."
 
 
 
@@ -32,13 +32,6 @@ esac
 echo "⏸️  Packages after bootloader selection:"
 printf '  - %s\n' "${DEFAULT_BASE_PACKAGES[@]}"
 
-read -n 1 -rsp $'🔎 Press any key to continue after verifying systemd is in the list...\n'
-echo
-
-
-
-
-
 
 echo "🧱 Default base packages:"
 printf '  - %s\n' "${DEFAULT_BASE_PACKAGES[@]}"
@@ -63,9 +56,6 @@ pacstrap -K /mnt "${BASE_PACKAGES[@]}"
 # Pause here to inspect packages
 echo "⏸️  Packages after bootloader selection:"
 printf '  - %s\n' "${BASE_PACKAGES[@]}"
-
-read -n 1 -rsp $'🔎 Press any key to continue after verifying systemd is in the list...\n'
-echo
 
 # Copy over config.sh and swap info if it exists
 cp ./config.sh /mnt/root/
