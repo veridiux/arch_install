@@ -97,54 +97,50 @@ if [[ "$AUTOPART" == "y" ]]; then
       HOME_PART="${HOME_DRIVE}1"
     fi
   else
-    # Ask if user wants a separate /home partition on the same drive
-    read -rp "Do you want a separate /home partition? [y/n]: " HOME_CHOICE
-    if [[ "$HOME_CHOICE" == "y" ]]; then
-      read -rp "Enter /home size in GiB (e.g., 20): " HOME_SIZE_GB
-      HOME_SIZE="${HOME_SIZE_GB}"
+    # Ask about /home on a separate drive
+    read -rp "Do you want to use a different drive for /home? [y/n]: " USE_SEPARATE_HOME_DRIVE
+    if [[ "$USE_SEPARATE_HOME_DRIVE" == "y" ]]; then
+      list_other_drives "$DRIVE"  # Inform user of available drives
+      read -rp "Enter the device (e.g., /dev/sdb) for /home: " HOME_DRIVE
 
-      # Prompt for home filesystem type
-      echo "Choose filesystem type for home partition:"
-      echo "1) ext4"
-      echo "2) btrfs"
-      echo "3) xfs"
-      echo "4) f2fs"
-      read -rp "Enter number [1-4]: " HOME_FS_CHOICE
+      echo "Do you want to use the full drive for /home?"
+      read -rp "Use full drive for /home? [y/n]: " USE_FULL_HOME_DRIVE
+      if [[ "$USE_FULL_HOME_DRIVE" == "y" ]]; then
+        parted "$HOME_DRIVE" --script mklabel gpt
+        parted "$HOME_DRIVE" --script mkpart primary ext4 1MiB 100%
+        HOME_PART="${HOME_DRIVE}1"
+      else
+        read -rp "Enter /home size in GiB (e.g., 20): " HOME_SIZE_GB
+        HOME_SIZE="${HOME_SIZE_GB}"
+        parted "$HOME_DRIVE" --script mklabel gpt
+        parted "$HOME_DRIVE" --script mkpart primary ext4 1MiB "$((HOME_SIZE_GB * 1024))MiB"
+        HOME_PART="${HOME_DRIVE}1"
+      fi
+    else
+      # Fallback to asking if they want a separate /home partition on the main drive
+      read -rp "Do you want a separate /home partition on the same drive? [y/n]: " HOME_CHOICE
+      if [[ "$HOME_CHOICE" == "y" ]]; then
+        read -rp "Enter /home size in GiB (e.g., 20): " HOME_SIZE_GB
+        HOME_SIZE="${HOME_SIZE_GB}"
 
-      case "$HOME_FS_CHOICE" in
-        1) HOME_FS_TYPE="ext4" ;;
-        2) HOME_FS_TYPE="btrfs" ;;
-        3) HOME_FS_TYPE="xfs" ;;
-        4) HOME_FS_TYPE="f2fs" ;;
-        *) echo "Invalid choice, defaulting to ext4"; HOME_FS_TYPE="ext4" ;;
-      esac
+        # Prompt for home filesystem type
+        echo "Choose filesystem type for home partition:"
+        echo "1) ext4"
+        echo "2) btrfs"
+        echo "3) xfs"
+        echo "4) f2fs"
+        read -rp "Enter number [1-4]: " HOME_FS_CHOICE
+
+        case "$HOME_FS_CHOICE" in
+          1) HOME_FS_TYPE="ext4" ;;
+          2) HOME_FS_TYPE="btrfs" ;;
+          3) HOME_FS_TYPE="xfs" ;;
+          4) HOME_FS_TYPE="f2fs" ;;
+          *) echo "Invalid choice, defaulting to ext4"; HOME_FS_TYPE="ext4" ;;
+        esac
+      fi
     fi
-  fi
 
-
-  else
-    # Fallback to asking if they want a separate /home partition on the main drive
-    read -rp "Do you want a separate /home partition on the same drive? [y/n]: " HOME_CHOICE
-    if [[ "$HOME_CHOICE" == "y" ]]; then
-      read -rp "Enter /home size in GiB (e.g., 20): " HOME_SIZE_GB
-      HOME_SIZE="${HOME_SIZE_GB}"
-
-      echo "Choose filesystem type for home partition:"
-      echo "1) ext4"
-      echo "2) btrfs"
-      echo "3) xfs"
-      echo "4) f2fs"
-      read -rp "Enter number [1-4]: " HOME_FS_CHOICE
-
-      case "$HOME_FS_CHOICE" in
-        1) HOME_FS_TYPE="ext4" ;;
-        2) HOME_FS_TYPE="btrfs" ;;
-        3) HOME_FS_TYPE="xfs" ;;
-        4) HOME_FS_TYPE="f2fs" ;;
-        *) echo "Invalid choice, defaulting to ext4"; HOME_FS_TYPE="ext4" ;;
-      esac
-    fi
-  fi
 
   if [[ "$FIRMWARE_MODE" == "UEFI" ]]; then
     echo "⚙️ UEFI mode detected – using GPT and EFI System Partition..."
