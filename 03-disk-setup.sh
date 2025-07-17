@@ -175,30 +175,13 @@ if [[ "$AUTOPART" == "y" ]]; then
     fi
 
     
-    echo "Current value of DRIVE: $DRIVE"
-    echo "Current value of HOME_DRIVE: $HOME_DRIVE"
-    read -rp "Press Enter to continue..."
-
-    
-    
-    
-    if [[ "$USE_SEPARATE_HOME_DRIVE" =~ ^[Yy]$ ]]; then
-      parted "$HOME_DRIVE" --script mkpart primary ext4 "${HOME_START}MiB" "$HOME_END"
-      HOME_PART="${HOME_DRIVE}${next_part}"
-    else
-      parted "$DRIVE" --script mkpart primary ext4 "${HOME_START}MiB" "$HOME_END"
-      HOME_PART="${DRIVE}${next_part}"
-    fi
-
-
-
     
     
     
     
     # Create home partition
-    # parted "$DRIVE" --script mkpart primary ext4 "${HOME_START}MiB" "$HOME_END"
-    # HOME_PART="${DRIVE}${next_part}"
+    parted "$DRIVE" --script mkpart primary ext4 "${HOME_START}MiB" "$HOME_END"
+    HOME_PART="${DRIVE}${next_part}"
 
     # Update pointers if size wasn't "100%"
     if [[ "$HOME_END" != "100%" ]]; then
