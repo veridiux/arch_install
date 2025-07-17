@@ -138,9 +138,6 @@ if [[ "$AUTOPART" == "y" ]]; then
     mkfs.ext4 "$BOOT_PART"
   fi
 
-  # You can add mkfs commands for HOME, ROOT, SWAP as needed here
-fi
-
 
 
 
