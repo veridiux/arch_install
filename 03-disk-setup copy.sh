@@ -32,6 +32,8 @@ if [[ "$AUTOPART" == "y" ]]; then
   echo "🧹 Wiping $DRIVE and creating partitions..."
   wipefs -af "$DRIVE"
 
+
+
   # Ask about swap partition
   read -rp "Do you want a swap partition? [y/n]: " SWAP_CHOICE
   if [[ "$SWAP_CHOICE" == "y" ]]; then
@@ -40,6 +42,8 @@ if [[ "$AUTOPART" == "y" ]]; then
   else
     SWAP_SIZE=""
   fi
+
+
 
   # Ask about separate /home partition
   read -rp "Do you want a separate /home partition? [y/n]: " HOME_CHOICE
@@ -50,6 +54,9 @@ if [[ "$AUTOPART" == "y" ]]; then
     HOME_SIZE=""
   fi
   
+
+
+
   if [ "$FIRMWARE_MODE" = "UEFI" ]; then
     parted "$DRIVE" --script mklabel gpt
     parted "$DRIVE" --script mkpart primary fat32 1MiB 512MiB
@@ -122,6 +129,9 @@ if [[ "$AUTOPART" == "y" ]]; then
     echo "📁 Formatting /boot (ext4)..."
     mkfs.ext4 "$BOOT_PART"
   fi
+
+
+
 
 
 
@@ -316,13 +326,15 @@ else
   mount "$ROOT_PART" /mnt
 
   if [ "$FIRMWARE_MODE" = "UEFI" ]; then
-    echo "📂 Creating /boot/efi and mounting boot partition..."
-    mkdir -p /mnt/boot/efi
-    mount "$BOOT_PART" /mnt/boot/efi
-  else
-    echo "📂 Creating /boot and mounting boot partition..."
-    mkdir -p /mnt/boot
-    mount "$BOOT_PART" /mnt/boot
+    if [ "$BOOTLOADER" = "systemd-boot" ]; then
+      echo "📂 Mounting EFI partition for systemd-boot to /boot..."
+      mkdir -p /mnt/boot
+      mount "$BOOT_PART" /mnt/boot
+    else
+      echo "📂 Mounting EFI partition for GRUB to /boot/efi..."
+      mkdir -p /mnt/boot/efi
+      mount "$BOOT_PART" /mnt/boot/efi
+    fi
   fi
 
   if [[ "$HOME_CHOICE" =~ ^[Yy]$ ]]; then
@@ -330,6 +342,7 @@ else
     mkdir -p /mnt/home
     mount "$HOME_PART" /mnt/home
   fi
+
 
   # Save values to config.sh
   echo "ROOT_PART=\"$ROOT_PART\"" >> config.sh
