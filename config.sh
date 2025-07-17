@@ -19,7 +19,7 @@ ENABLE_MULTILIB=true  # Set to true to enable multilib repo (needed for Steam, W
 
 # Hostname and locale
 HOSTNAME="archlinux"
-TIMEZONE="America/New_York"
+TIMEZONE="America/Chicago"
 LOCALE="en_US.UTF-8"
 
 # Desktop Environment options
