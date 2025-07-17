@@ -265,6 +265,16 @@ if [[ "$AUTOPART" == "y" ]]; then
 
 
 
+  # Format and enable swap
+  if [[ -n "$SWAP_PART" ]]; then
+    echo "💽 Formatting $SWAP_PART as swap..."
+    mkswap "$SWAP_PART"
+    
+    echo "🌀 Enabling swap on $SWAP_PART..."
+    swapon "$SWAP_PART"
+    
+    echo "SWAP_PART=\"$SWAP_PART\"" >> config.sh
+  fi
 
 
 
