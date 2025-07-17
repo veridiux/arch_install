@@ -316,15 +316,13 @@ else
   mount "$ROOT_PART" /mnt
 
   if [ "$FIRMWARE_MODE" = "UEFI" ]; then
-    if [ "$BOOTLOADER" = "systemd-boot" ]; then
-      echo "📂 Mounting EFI partition for systemd-boot to /boot..."
-      mkdir -p /mnt/boot
-      mount "$BOOT_PART" /mnt/boot
-    else
-      echo "📂 Mounting EFI partition for GRUB to /boot/efi..."
-      mkdir -p /mnt/boot/efi
-      mount "$BOOT_PART" /mnt/boot/efi
-    fi
+    echo "📂 Creating /boot/efi and mounting boot partition..."
+    mkdir -p /mnt/boot/efi
+    mount "$BOOT_PART" /mnt/boot/efi
+  else
+    echo "📂 Creating /boot and mounting boot partition..."
+    mkdir -p /mnt/boot
+    mount "$BOOT_PART" /mnt/boot
   fi
 
   if [[ "$HOME_CHOICE" =~ ^[Yy]$ ]]; then
@@ -332,7 +330,6 @@ else
     mkdir -p /mnt/home
     mount "$HOME_PART" /mnt/home
   fi
-
 
   # Save values to config.sh
   echo "ROOT_PART=\"$ROOT_PART\"" >> config.sh
