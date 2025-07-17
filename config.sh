@@ -5,6 +5,7 @@
 # Device & mount point
 
 DRIVE=""
+HOME_DRIVE=""
 BOOT_PART=""
 ROOT_PART=""
 HOME_PART=""

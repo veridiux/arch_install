@@ -72,7 +72,7 @@ if [[ "$AUTOPART" == "y" ]]; then
     # Ask about /home on a separate drive
     read -rp "Do you want to use a different drive for /home? [y/n]: " USE_SEPARATE_HOME_DRIVE
     if [[ "$USE_SEPARATE_HOME_DRIVE" == "y" ]]; then
-      list_other_drives "$DRIVE"  # Inform user of available drives
+      lsblk -dpno NAME,SIZE | grep -E "/dev/sd|/dev/nvme|/dev/vd"
       read -rp "Enter the device (e.g., /dev/sdb) for /home: " HOME_DRIVE
       echo "Do you want to use the full drive for /home?"
       # Prompt for home filesystem type
@@ -174,9 +174,31 @@ if [[ "$AUTOPART" == "y" ]]; then
       HOME_END="${HOME_END}MiB"
     fi
 
+    
+    
+    
+    
+    
+    if [[ "$USE_HOME_PART" == true ]]; then
+      parted "$HOME_DRIVE_TO_USE" --script mkpart primary "$HOME_FS_TYPE" "${HOME_START}MiB" "$HOME_END"
+
+      # Determine the correct partition name
+      if [[ "$HOME_DRIVE_TO_USE" == "$DRIVE" ]]; then
+        HOME_PART="${DRIVE}${next_part}"
+        next_part=$((next_part + 1))
+      else
+        # Assuming first partition on other drive
+        HOME_PART="${HOME_DRIVE_TO_USE}1"
+      fi
+    fi
+
+    
+    
+    
+    
     # Create home partition
-    parted "$DRIVE" --script mkpart primary ext4 "${HOME_START}MiB" "$HOME_END"
-    HOME_PART="${DRIVE}${next_part}"
+    # parted "$DRIVE" --script mkpart primary ext4 "${HOME_START}MiB" "$HOME_END"
+    # HOME_PART="${DRIVE}${next_part}"
 
     # Update pointers if size wasn't "100%"
     if [[ "$HOME_END" != "100%" ]]; then
@@ -384,6 +406,7 @@ if [[ "$AUTOPART" == "y" ]]; then
   echo "ROOT_PART=\"$ROOT_PART\"" >> config.sh
   echo "BOOT_PART=\"$BOOT_PART\"" >> config.sh
   echo "DRIVE=\"$DRIVE\"" >> config.sh
+  echo "HOME_DRIVE=\"$HOME_DRIVE\"" >> config.sh
   [[ -n "$HOME_PART" ]] && echo "HOME_PART=\"$HOME_PART\"" >> config.sh
   [[ -n "$SWAP_PART" ]] && echo "SWAP_PART=\"$SWAP_PART\"" >> config.sh
   [[ -n "$BIOS_GRUB_PART" ]] && echo "BIOS_GRUB_PART=\"$BIOS_GRUB_PART\"" >> config.sh
