@@ -175,7 +175,10 @@ if [[ "$AUTOPART" == "y" ]]; then
     fi
 
     
-    
+    echo "Current value of DRIVE: $DRIVE"
+    echo "Current value of HOME_DRIVE: $HOME_DRIVE"
+    read -rp "Press Enter to continue..."
+
     
     
     
