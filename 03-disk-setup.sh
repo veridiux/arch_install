@@ -198,24 +198,23 @@ if [[ "$AUTOPART" == "y" ]]; then
 
 
 
-: <<'COMMENT'
   # Optional HOME partition
-  if [[ -n "$HOME_SIZE" ]]; then
+  # if [[ -n "$HOME_SIZE" ]]; then
   # Calculate home partition end in MiB
-  HOME_START=${start_after_boot}
-  HOME_END=$((HOME_START + HOME_SIZE_GB * 1024))
+  # HOME_START=${start_after_boot}
+  # HOME_END=$((HOME_START + HOME_SIZE_GB * 1024))
   
   # Create home partition
-  parted "$DRIVE" --script mkpart primary ext4 "${HOME_START}MiB" "${HOME_END}MiB"
-  HOME_PART="${DRIVE}${next_part}"
+  # parted "$DRIVE" --script mkpart primary ext4 "${HOME_START}MiB" "${HOME_END}MiB"
+  # HOME_PART="${DRIVE}${next_part}"
   
   # Update pointers for next partition start and partition number
-  start_after_home=${HOME_END}
-  next_part=$((next_part + 1))
-  else
-  start_after_home=${start_after_boot}
-  fi
-COMMENT
+  # start_after_home=${HOME_END}
+  # next_part=$((next_part + 1))
+  # else
+  # start_after_home=${start_after_boot}
+  # fi
+
 
 
   # Optional SWAP
