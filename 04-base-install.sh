@@ -1,3 +1,9 @@
+#!/bin/bash
+
+read -rp "🔸 Starting script: $(basename "$0"). Press Enter to continue..."
+
+
+
 set -e
 trap 'echo "Error on line $LINENO"; exit 1' ERR
 
