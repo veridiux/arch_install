@@ -7,7 +7,7 @@ SCRIPTS=(
   "03-disk-setup.sh"
   "04-base-install.sh"
   "05-hardware-detect.sh"
-  "06-system_input"
+  "06-system_input.sh"
   "07-system-config.sh"
   "08-de-install.sh"
   "09-user-setup.sh"
