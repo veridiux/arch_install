@@ -122,7 +122,9 @@ if [[ "$AUTOPART" == "y" ]]; then
         HOME_SIZE="$HOME_SIZE_MAX"
       else
         read -rp "Enter size for /home partition in GiB (e.g., 100): " HOME_SIZE_GB
-        HOME_SIZE_MIB=$((HOME_SIZE_GB * 1024))
+        HOME_SIZE_MIB=$(echo "$HOME_SIZE_GB * 1024" | bc)
+        HOME_SIZE_MIB=${HOME_SIZE_MIB%.*}  # Remove decimal part for parted
+
         echo "📦 Wiping and partitioning $HOME_DRIVE for /home with size ${HOME_SIZE_GB}GiB..."
 
         wipefs -af "$HOME_DRIVE"
