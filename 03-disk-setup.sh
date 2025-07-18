@@ -99,9 +99,21 @@ if [[ "$AUTOPART" == "y" ]]; then
           parted "$HOME_DRIVE" --script mklabel gpt
 
           # Create full-size partition
+          echo "📦 Wiping and partitioning $HOME_DRIVE for /home..."
+
           wipefs -af "$HOME_DRIVE"
           parted "$HOME_DRIVE" --script mklabel gpt
           parted "$HOME_DRIVE" --script mkpart primary 1MiB 100%
+
+          # Handle NVMe naming
+          if [[ "$HOME_DRIVE" =~ ^/dev/nvme ]]; then
+            HOME_PART="${HOME_DRIVE}p1"
+          else
+            HOME_PART="${HOME_DRIVE}1"
+          fi
+
+          echo "✅ Created $HOME_PART for /home"
+
 
 
           # Handle NVMe naming (e.g., /dev/nvme0n1 → /dev/nvme0n1p1)
