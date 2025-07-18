@@ -71,27 +71,6 @@ if [[ "$AUTOPART" == "y" ]]; then
 
     # Ask about /home on a separate drive
     read -rp "Do you want to use a different drive for /home? [y/n]: " USE_SEPARATE_HOME_DRIVE
-    if [[ "$USE_SEPARATE_HOME_DRIVE" == "y" ]]; then
-      lsblk -dpno NAME,SIZE | grep -E "/dev/sd|/dev/nvme|/dev/vd"
-      read -rp "Enter the device (e.g., /dev/sdb) for /home: " HOME_DRIVE
-
-      echo "Choose filesystem type for home partition:"
-      echo "1) ext4"
-      echo "2) btrfs"
-      echo "3) xfs"
-      echo "4) f2fs"
-      read -rp "Enter number [1-4]: " HOME_FS_CHOICE
-
-      case "$HOME_FS_CHOICE" in
-        1) HOME_FS_TYPE="ext4" ;;
-        2) HOME_FS_TYPE="btrfs" ;;
-        3) HOME_FS_TYPE="xfs" ;;
-        4) HOME_FS_TYPE="f2fs" ;;
-        *) echo "Invalid choice, defaulting to ext4"; HOME_FS_TYPE="ext4" ;;
-      esac
-
-      read -rp "Use full drive for /home? [y/n]: " USE_FULL_HOME_DRIVE
-
       if [[ "$USE_SEPARATE_HOME_DRIVE" == "y" ]]; then
         lsblk -dpno NAME,SIZE | grep -E "/dev/sd|/dev/nvme|/dev/vd"
         read -rp "Enter the device (e.g., /dev/sdb or /dev/nvme0n1) for /home: " HOME_DRIVE
