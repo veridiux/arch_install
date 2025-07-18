@@ -476,6 +476,10 @@ else
   echo "📁 After partitioning, enter your root partition:"
   read -rp "Root partition (e.g., /dev/sda2): " ROOT_PART
   read -rp "Boot partition (e.g., /dev/sda1): " BOOT_PART
+  read -rp "⚙️  Would you like to use a SWAP partition? [y/n]: " SWAP_CHOICE
+    if [[ "$SWAP_CHOICE" =~ ^[Yy]$ ]]; then
+      read -rp "Swap partition (e.g., /dev/sda4): " SWAP_PART
+    fi
 
   # Prompt for root filesystem type
   echo "Choose filesystem type for root partition:"
@@ -524,10 +528,7 @@ else
       cfdisk "$HOME_DISK"
     fi
 
-    read -rp "⚙️  Would you like to use a SWAP partition? [y/n]: " SWAP_CHOICE
-    if [[ "$SWAP_CHOICE" =~ ^[Yy]$ ]]; then
-      read -rp "Swap partition (e.g., /dev/sda4): " SWAP_PART
-    fi
+    
 
     read -rp "Enter the partition for /home (e.g., /dev/sdb1): " HOME_PART
 
