@@ -32,16 +32,7 @@ esac
 
 
 
-echo "[*] Enabling multilib repository..."
 
-# Uncomment [multilib] and its Include line
-sed -i '/^\s*#\s*\[multilib\]/s/^#//' /etc/pacman.conf
-sed -i '/^\s*#\s*Include = \/etc\/pacman\.d\/mirrorlist/{s/^#//}' /etc/pacman.conf
-
-# Update package database
-pacman -Sy
-
-echo "[+] Multilib repository enabled."
 
 
 
@@ -83,6 +74,18 @@ cp ./config.sh /mnt/root/
 # Generate fstab
 echo "🧾 Generating fstab..."
 genfstab -U /mnt >> /mnt/etc/fstab
+
+
+echo "[*] Enabling multilib repository..."
+
+# Uncomment [multilib] and its Include line
+sed -i '/^\s*#\s*\[multilib\]/s/^#//' /etc/pacman.conf
+sed -i '/^\s*#\s*Include = \/etc\/pacman\.d\/mirrorlist/{s/^#//}' /etc/pacman.conf
+
+# Update package database
+pacman -Sy
+
+echo "[+] Multilib repository enabled."
 
 echo "✅ Base system installed and fstab generated."
 echo "➡️ Ready to chroot in next step."
