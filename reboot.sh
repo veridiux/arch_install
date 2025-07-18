@@ -1,6 +1,6 @@
 #!/bin/bash
 set -e
-
+# Testing
 
 # Disable swap if any
 if swapon --show | grep -q '/mnt/swapfile'; then
