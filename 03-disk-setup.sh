@@ -135,7 +135,7 @@ if [[ "$AUTOPART" == "y" ]]; then
           echo "⚠️ Partial size for separate /home drive not supported yet."
           exit 1
         fi
-
+      fi
 
     else
       # fallback to same-drive /home prompt
