@@ -92,18 +92,50 @@ if [[ "$AUTOPART" == "y" ]]; then
 
       read -rp "Use full drive for /home? [y/n]: " USE_FULL_HOME_DRIVE
 
-      if [[ "$USE_FULL_HOME_DRIVE" == "y" ]]; then
-        echo "📦 Partitioning $HOME_DRIVE for /home (full drive)..."
-        wipefs -af "$HOME_DRIVE"
-        parted "$HOME_DRIVE" --script mklabel gpt
-        parted "$HOME_DRIVE" --script mkpart primary "$HOME_FS_TYPE" 1MiB 100%
+      if [[ "$USE_SEPARATE_HOME_DRIVE" == "y" ]]; then
+        lsblk -dpno NAME,SIZE | grep -E "/dev/sd|/dev/nvme|/dev/vd"
+        read -rp "Enter the device (e.g., /dev/sdb or /dev/nvme0n1) for /home: " HOME_DRIVE
 
-        HOME_PART="${HOME_DRIVE}1"
-        HOME_SIZE="$HOME_SIZE_MAX"  # Just so later logic behaves
-      else
-        echo "⚠️ Partial-drive /home setup not implemented yet. Exiting."
-        exit 1
-      fi
+        echo "Choose filesystem type for home partition:"
+        echo "1) ext4"
+        echo "2) btrfs"
+        echo "3) xfs"
+        echo "4) f2fs"
+        read -rp "Enter number [1-4]: " HOME_FS_CHOICE
+
+        case "$HOME_FS_CHOICE" in
+          1) HOME_FS_TYPE="ext4" ;;
+          2) HOME_FS_TYPE="btrfs" ;;
+          3) HOME_FS_TYPE="xfs" ;;
+          4) HOME_FS_TYPE="f2fs" ;;
+          *) echo "Invalid choice, defaulting to ext4"; HOME_FS_TYPE="ext4" ;;
+        esac
+
+        read -rp "Use full drive for /home? [y/n]: " USE_FULL_HOME_DRIVE
+
+        if [[ "$USE_FULL_HOME_DRIVE" == "y" ]]; then
+          echo "📦 Wiping and partitioning $HOME_DRIVE for /home..."
+
+          wipefs -af "$HOME_DRIVE"
+          parted "$HOME_DRIVE" --script mklabel gpt
+
+          # Create full-size partition
+          parted "$HOME_DRIVE" --script mkpart primary "$HOME_FS_TYPE" 1MiB 100%
+
+          # Handle NVMe naming (e.g., /dev/nvme0n1 → /dev/nvme0n1p1)
+          if [[ "$HOME_DRIVE" =~ ^/dev/nvme ]]; then
+            HOME_PART="${HOME_DRIVE}p1"
+          else
+            HOME_PART="${HOME_DRIVE}1"
+          fi
+
+          echo "✅ Created $HOME_PART for /home"
+          HOME_SIZE="$HOME_SIZE_MAX"
+        else
+          echo "⚠️ Partial size for separate /home drive not supported yet."
+          exit 1
+        fi
+
 
     else
       # fallback to same-drive /home prompt
