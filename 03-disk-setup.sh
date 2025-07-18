@@ -121,9 +121,25 @@ if [[ "$AUTOPART" == "y" ]]; then
         echo "✅ Created $HOME_PART for /home"
         HOME_SIZE="$HOME_SIZE_MAX"
       else
-        echo "⚠️ Partial size for separate /home drive not supported yet."
-        exit 1
+        read -rp "Enter size for /home partition in GiB (e.g., 100): " HOME_SIZE_GB
+        HOME_SIZE_MIB=$((HOME_SIZE_GB * 1024))
+        echo "📦 Wiping and partitioning $HOME_DRIVE for /home with size ${HOME_SIZE_GB}GiB..."
+
+        wipefs -af "$HOME_DRIVE"
+        parted "$HOME_DRIVE" --script mklabel gpt
+        parted "$HOME_DRIVE" --script mkpart primary 1MiB "${HOME_SIZE_MIB}MiB"
+
+        # Handle NVMe naming
+        if [[ "$HOME_DRIVE" =~ ^/dev/nvme ]]; then
+          HOME_PART="${HOME_DRIVE}p1"
+        else
+          HOME_PART="${HOME_DRIVE}1"
+        fi
+
+        echo "✅ Created $HOME_PART for /home (${HOME_SIZE_GB}GiB)"
+        mkfs.$HOME_FS_TYPE "$HOME_PART"
       fi
+
     
 
   else
