@@ -524,6 +524,11 @@ else
       cfdisk "$HOME_DISK"
     fi
 
+    read -rp "⚙️  Would you like to use a SWAP partition? [y/n]: " SWAP_CHOICE
+    if [[ "$SWAP_CHOICE" =~ ^[Yy]$ ]]; then
+      read -rp "Swap partition (e.g., /dev/sda4): " SWAP_PART
+    fi
+
     read -rp "Enter the partition for /home (e.g., /dev/sdb1): " HOME_PART
 
     # Prompt for home filesystem type
@@ -544,10 +549,7 @@ else
   fi
 
 
-  read -rp "⚙️  Would you like to use a SWAP partition? [y/n]: " SWAP_CHOICE
-  if [[ "$SWAP_CHOICE" =~ ^[Yy]$ ]]; then
-    read -rp "Swap partition (e.g., /dev/sda4): " SWAP_PART
-  fi
+  
   
   
   
