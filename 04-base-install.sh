@@ -28,6 +28,25 @@ case "$BOOTLOADER" in
     ;;
 esac
 
+
+
+
+
+echo "[*] Enabling multilib repository..."
+
+# Uncomment [multilib] and its Include line
+sed -i '/^\s*#\s*\[multilib\]/s/^#//' /etc/pacman.conf
+sed -i '/^\s*#\s*Include = \/etc\/pacman\.d\/mirrorlist/{s/^#//}' /etc/pacman.conf
+
+# Update package database
+pacman -Sy
+
+echo "[+] Multilib repository enabled."
+
+
+
+
+
 # Pause here to inspect packages
 echo "⏸️  Packages after bootloader selection:"
 printf '  - %s\n' "${DEFAULT_BASE_PACKAGES[@]}"

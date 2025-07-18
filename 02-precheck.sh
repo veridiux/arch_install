@@ -6,6 +6,11 @@ source ./config.sh
 echo "🔍 Checking internet connection..."
 if ! ping -q -c 1 archlinux.org >/dev/null; then
   echo "❌ No internet connection. Please connect and rerun."
+  echo "You can use iwctl to connect"
+  echo "iwctl"
+  echo "device list"
+  echo "station YOURDEVICE scan"
+  echo  "station YOURDEVICE connect NETWORKNAME"
   exit 1
 fi
 
