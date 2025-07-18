@@ -639,22 +639,25 @@ else
   fi
 
   # Format home partition with check
+  # Format home partition with user confirmation
   if [[ "$HOME_CHOICE" =~ ^[Yy]$ ]]; then
     current_fs=$(detect_fs "$HOME_PART")
+
     if [ -n "$current_fs" ]; then
-      echo "⚠️ Home partition $HOME_PART already has filesystem: $current_fs"
-      read -rp "Do you want to reformat it to $HOME_FS_TYPE? [y/N]: " confirm
-      if [[ "$confirm" =~ ^[Yy]$ ]]; then
-        echo "Formatting home partition with $HOME_FS_TYPE..."
+      echo "🔍 Detected existing filesystem on $HOME_PART: $current_fs"
+      read -rp "⚠️ Do you want to format the home partition? [y/N]: " FORMAT_HOME
+      if [[ "$FORMAT_HOME" =~ ^[Yy]$ ]]; then
+        echo "🧹 Formatting $HOME_PART as $HOME_FS_TYPE..."
         mkfs_with_force "$HOME_FS_TYPE" "$HOME_PART"
       else
-        echo "Keeping existing filesystem on home partition."
+        echo "✅ Keeping existing data on $HOME_PART"
       fi
     else
-      echo "Formatting home partition with $HOME_FS_TYPE..."
+      echo "📭 No filesystem detected — formatting $HOME_PART as $HOME_FS_TYPE..."
       mkfs_with_force "$HOME_FS_TYPE" "$HOME_PART"
     fi
   fi
+
 
   if [[ "$SWAP_CHOICE" =~ ^[Yy]$ ]]; then
     echo "🔍 Creating swap partition..."
