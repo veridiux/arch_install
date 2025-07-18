@@ -67,7 +67,6 @@ if [[ "$AUTOPART" == "y" ]]; then
   if [[ "$SWAP_CHOICE" == "y" ]]; then
     read -rp "Enter swap size in GiB (e.g., 2): " SWAP_SIZE_GB
     SWAP_SIZE="${SWAP_SIZE_GB}"
-  fi
 
     # Ask about /home on a separate drive
     read -rp "Do you want to use a different drive for /home? [y/n]: " USE_SEPARATE_HOME_DRIVE
