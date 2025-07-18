@@ -204,41 +204,37 @@ if [[ "$AUTOPART" == "y" ]]; then
 
 
 
+  if [[ "$USE_SEPARATE_HOME_DRIVE" == "y" ]]; then
+  start_after_home=$start_after_boot
 
-  # Optional HOME partition
-  if [[ -n "$HOME_SIZE" ]]; then
-    HOME_START=${start_after_boot}
-
-    if [[ "$HOME_SIZE" == "$HOME_SIZE_MAX" ]]; then
-      # Use all remaining space on the drive
-      HOME_END="100%"
-    else
-      # Calculate specific end in MiB
-      HOME_END=$((HOME_START + HOME_SIZE * 1024))
-      HOME_END="${HOME_END}MiB"
-    fi
-    
-
-
-
-    # Create home partition
-    parted "$DRIVE" --script mkpart primary ext4 "${HOME_START}MiB" "$HOME_END"
-    HOME_PART="${DRIVE}${next_part}"
-
-
-
-
-
-    # Update pointers if size wasn't "100%"
-    if [[ "$HOME_END" != "100%" ]]; then
-      start_after_home=$((HOME_START + HOME_SIZE * 1024))
-    else
-      start_after_home=""  # Nothing expected after this
-    fi
-
-    next_part=$((next_part + 1))
   else
-    start_after_home=${start_after_boot}
+    if [[ -n "$HOME_SIZE" ]]; then
+      HOME_START=${start_after_boot}
+
+      if [[ "$HOME_SIZE" == "$HOME_SIZE_MAX" ]]; then
+        # Use all remaining space on the drive
+        HOME_END="100%"
+      else
+        # Calculate specific end in MiB
+        HOME_END=$((HOME_START + HOME_SIZE * 1024))
+        HOME_END="${HOME_END}MiB"
+      fi
+
+      # Create home partition
+      parted "$DRIVE" --script mkpart primary ext4 "${HOME_START}MiB" "$HOME_END"
+      HOME_PART="${DRIVE}${next_part}"
+
+      # Update pointers if size wasn't "100%"
+      if [[ "$HOME_END" != "100%" ]]; then
+        start_after_home=$((HOME_START + HOME_SIZE * 1024))
+      else
+        start_after_home=""  # Nothing expected after this
+      fi
+
+      next_part=$((next_part + 1))
+    else
+      start_after_home=${start_after_boot}
+    fi
   fi
 
 
