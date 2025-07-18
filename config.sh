@@ -19,9 +19,9 @@ FS_TYPE="ext4"
 ENABLE_MULTILIB=true  # Set to true to enable multilib repo (needed for Steam, Wine, etc)
 
 # Hostname and locale
-HOSTNAME="archlinux"
-TIMEZONE="America/Chicago"
-LOCALE="en_US.UTF-8"
+HOSTNAME=""
+TIMEZONE=""
+LOCALE=""
 
 # Desktop Environment options
 DESKTOP_ENV=""

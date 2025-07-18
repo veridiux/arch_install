@@ -10,7 +10,7 @@ if ! ping -q -c 1 archlinux.org >/dev/null; then
   echo "iwctl"
   echo "device list"
   echo "station YOURDEVICE scan"
-  echo  "station YOURDEVICE connect NETWORKNAME"
+  echo "station YOURDEVICE connect NETWORKNAME"
   exit 1
 fi
 
