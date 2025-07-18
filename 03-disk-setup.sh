@@ -93,10 +93,6 @@ if [[ "$AUTOPART" == "y" ]]; then
         read -rp "Use full drive for /home? [y/n]: " USE_FULL_HOME_DRIVE
 
         if [[ "$USE_FULL_HOME_DRIVE" == "y" ]]; then
-          echo "📦 Wiping and partitioning $HOME_DRIVE for /home..."
-
-          wipefs -af "$HOME_DRIVE"
-          parted "$HOME_DRIVE" --script mklabel gpt
 
           # Create full-size partition
           echo "📦 Wiping and partitioning $HOME_DRIVE for /home..."
@@ -113,6 +109,7 @@ if [[ "$AUTOPART" == "y" ]]; then
           fi
 
           echo "✅ Created $HOME_PART for /home"
+          mkfs.$HOME_FS_TYPE "$HOME_PART"
 
 
 
