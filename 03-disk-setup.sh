@@ -495,7 +495,36 @@ else
 
   read -rp "⚙️  Would you like to use a separate HOME partition? [y/n]: " HOME_CHOICE
   if [[ "$HOME_CHOICE" =~ ^[Yy]$ ]]; then
-    read -rp "Home partition (e.g., /dev/sda3): " HOME_PART
+    read -rp "📦 Would you like to use a separate disk for /home? [y/n]: " SEPARATE_HOME_DISK
+    if [[ "$SEPARATE_HOME_DISK" =~ ^[Yy]$ ]]; then
+      echo "🔍 Scanning for available drives..."
+
+      # Get list of drives not already used for root
+      USED_DRIVES=$(lsblk -no PKNAME "$ROOT_PART" "$BOOT_PART" "$SWAP_PART" 2>/dev/null | sort -u)
+      ALL_DRIVES=$(lsblk -dpno NAME | grep -E "/dev/(sd|nvme|vd)")
+
+      echo "Available drives:"
+      AVAILABLE_DRIVES=()
+      while read -r drive; do
+        base=$(basename "$drive")
+        if ! echo "$USED_DRIVES" | grep -q "$base"; then
+          echo " - $drive"
+          AVAILABLE_DRIVES+=("$drive")
+        fi
+      done <<< "$ALL_DRIVES"
+
+      if [[ "${#AVAILABLE_DRIVES[@]}" -eq 0 ]]; then
+        echo "❌ No available drives found for /home."
+        exit 1
+      fi
+
+      read -rp "Enter the device (e.g., /dev/sdb): " HOME_DISK
+      echo "🛠 Launching cfdisk on $HOME_DISK..."
+      read -rp "Press Enter to continue..."
+      cfdisk "$HOME_DISK"
+    fi
+
+    read -rp "Enter the partition for /home (e.g., /dev/sdb1): " HOME_PART
 
     # Prompt for home filesystem type
     echo "Choose filesystem type for home partition:"
@@ -513,6 +542,7 @@ else
       *) echo "Invalid choice, defaulting to ext4"; HOME_FS_TYPE="ext4" ;;
     esac
   fi
+
 
   read -rp "⚙️  Would you like to use a SWAP partition? [y/n]: " SWAP_CHOICE
   if [[ "$SWAP_CHOICE" =~ ^[Yy]$ ]]; then
