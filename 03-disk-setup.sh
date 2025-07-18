@@ -89,8 +89,7 @@ if [[ "$AUTOPART" == "y" ]]; then
       *) echo "Invalid choice, defaulting to ext4"; HOME_FS_TYPE="ext4" ;;
     esac
 
-    read -rp "Use full drive for /home? [y/n]: " USE_FULL_HOME_DRIVE
-
+      read -rp "Use full drive for /home? [y/n]: " USE_FULL_HOME_DRIVE
       if [[ "$USE_FULL_HOME_DRIVE" == "y" ]]; then
 
         # Create full-size partition
@@ -125,7 +124,7 @@ if [[ "$AUTOPART" == "y" ]]; then
         echo "⚠️ Partial size for separate /home drive not supported yet."
         exit 1
       fi
-    fi
+    
 
   else
     # fallback to same-drive /home prompt
