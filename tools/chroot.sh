@@ -29,6 +29,9 @@ do_chroot() {
   echo "🔍 Mounting $ROOT_PART to /mnt"
   mount "$ROOT_PART" /mnt
 
+  # Create /mnt/boot if missing
+  mkdir -p /mnt/boot
+
   echo "🔍 Mounting boot partition ($BOOT_PART)"
   mount "$BOOT_PART" /mnt/boot
 
@@ -41,15 +44,21 @@ do_chroot() {
   mount --bind /run /mnt/run
 
   echo "✅ Environment prepared. Entering chroot..."
+
+  # Run hostnamectl inside chroot and get hostname BEFORE entering interactive shell
+  INSTALLED_HOSTNAME=$(chroot /mnt hostnamectl status --static)
+
+  # Enter interactive shell
   chroot /mnt /bin/bash
 
   echo "🧪 Checking if chroot was successful..."
-  if [[ "$(hostnamectl status 2>/dev/null | grep -i 'Static hostname')" != *archiso* ]]; then
-    echo "✅ You are now in your installed system!"
+  if [[ "$INSTALLED_HOSTNAME" != "archiso" && -n "$INSTALLED_HOSTNAME" ]]; then
+    echo "✅ You were inside your installed system with hostname: $INSTALLED_HOSTNAME"
   else
-    echo "⚠️ Still in live environment. Chroot may have failed."
+    echo "⚠️ The chroot environment looks like the live environment or hostname is empty."
   fi
 }
+
 
 # Helper: Unmount
 do_unmount() {
