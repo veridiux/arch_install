@@ -34,10 +34,20 @@ GPU_DRIVER_PACKAGES=()
 # Additional packages
 EXTRA_PACKAGES=()
 
+ENABLE_NETWORKMANAGER=""
+ENABLE_BLUETOOTH=""
+ENABLE_PRINTING=""
+ENABLE_VIRTUALIZATION=""
+ENABLE_AUDIO=""
+
+
+
+
 # Username
-USERNAME="user"
+USERNAME=""
 PASSWORD=""
 
 # Boot setup (set by 01-detect-boot.sh)
 FIRMWARE_MODE=""
 BOOTLOADER=""
+
