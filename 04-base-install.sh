@@ -12,7 +12,7 @@ source ./config.sh
 echo "📦 Installing Arch base system..."
 
 # Ask user to confirm or modify base packages
-DEFAULT_BASE_PACKAGES=("base" "linux" "linux-firmware" "vim" "nano" "networkmanager" "sudo")
+DEFAULT_BASE_PACKAGES=("base" "linux" "linux-firmware" "nano" "networkmanager" "sudo")
 
 # Set bootloader package based on config
 case "$BOOTLOADER" in

@@ -11,9 +11,10 @@ echo "4) Cinnamon"
 echo "5) MATE"
 echo "6) i3 (tiling window manager)"
 echo "7) Sway (Wayland i3 fork)"
+echo "8) Hyprland (Wayland dynamic tiling WM)"
 echo "0) Skip DE install (headless/server)"
 
-read -rp "Enter choice [0-7]: " DE_CHOICE
+read -rp "Enter choice [0-8]: " DE_CHOICE
 
 case $DE_CHOICE in
   1)
@@ -49,7 +50,16 @@ case $DE_CHOICE in
   7)
     DESKTOP_ENV="sway"
     DE_PACKAGES=("sway" "swaybg" "foot" "waybar")
-    DISPLAY_MANAGER=""  # No DM, login via TTY or greetd (optional later)
+    DISPLAY_MANAGER=""  # TTY/greetd recommended
+    ;;
+  8)
+    DESKTOP_ENV="hyprland"
+    DE_PACKAGES=(
+      "hyprland" "xdg-desktop-portal-hyprland" "waybar" "foot"
+      "rofi" "dunst" "thunar" "pavucontrol" "brightnessctl"
+      "network-manager-applet" "wl-clipboard" "hyprpaper" "swww"
+    )
+    DISPLAY_MANAGER=""  # TTY or greetd recommended
     ;;
   0)
     echo "⚠️ Skipping DE install."
@@ -62,6 +72,7 @@ case $DE_CHOICE in
     exit 1
     ;;
 esac
+
 
 echo "📦 Installing DE: $DESKTOP_ENV"
 if [[ ${#DE_PACKAGES[@]} -gt 0 ]]; then

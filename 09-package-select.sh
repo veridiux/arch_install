@@ -8,14 +8,41 @@ echo "🎁 Optional Package Sets"
 declare -A PACKAGE_SETS
 
 # Define named sets here for easy extension
+# PACKAGE_SETS=(
+#   ["Dev Tools"]="git base-devel cmake python python-pip"
+#   ["Browsers"]="firefox chromium"
+#   ["Gaming"]="steam lutris mangohud"
+#   ["Media"]="vlc mpv ffmpeg"
+#   ["Office"]="libreoffice-fresh hunspell-en_us"
+#   ["Bluetooth"]="bluez bluez-utils blueman"
+#   ["Utility"]="rsync zip unzip tar rsync"
+#   ["Custom"]="wget git networkmanager curl vim neovim network-manager-applet"
+#   ["Audio"]="pipewire pipewire-alsa pipewire-pulse pipewire-jack wireplumber pavucontrol"
+# )
+
+
 PACKAGE_SETS=(
-  ["Dev Tools"]="git base-devel cmake python python-pip"
+  ["Dev Tools"]="git base-devel cmake python python-pip gcc make gdb pkgconf"
   ["Browsers"]="firefox chromium"
-  ["Gaming"]="steam lutris mangohud"
-  ["Media"]="vlc mpv ffmpeg"
-  ["Office"]="libreoffice-fresh hunspell-en_us"
+  ["Gaming"]="steam lutris mangohud gamemode wine winetricks"
+  ["Media"]="vlc mpv ffmpeg obs-studio"
+  ["Office"]="libreoffice-fresh hunspell-en_us evince"
   ["Bluetooth"]="bluez bluez-utils blueman"
+  ["Utility"]="rsync zip unzip tar htop btop curl wget file"
+  ["Custom"]="wget git networkmanager curl vim neovim network-manager-applet"
+  ["Audio"]="pipewire pipewire-alsa pipewire-pulse pipewire-jack wireplumber pavucontrol alsa-utils"
+  ["Fonts"]="ttf-dejavu ttf-liberation noto-fonts ttf-nerd-fonts-symbols ttf-nerd-fonts-symbols-mono"
+  ["Printing"]="cups system-config-printer gutenprint"
+  ["Virtualization"]="qemu virt-manager virt-viewer dnsmasq vde2 bridge-utils libvirt"
+  ["Development GUIs"]="code geany meld"
+  ["Shell Tools"]="zsh zsh-completions zsh-autosuggestions zsh-syntax-highlighting"
+  ["Theming"]="lxappearance papirus-icon-theme kvantum qt5ct"
 )
+
+
+
+
+
 
 SELECTED_PACKAGES=()
 
