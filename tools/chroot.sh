@@ -50,20 +50,33 @@ detect_btrfs() {
   fi
 }
 
-# Mount the root filesystem
 mount_root() {
-  echo "🔍 Mounting root ($ROOT_PART) to /mnt"
+  echo "🔍 Probing root partition ($ROOT_PART)"
+
+  mkdir -p /mnt
 
   if $IS_BTRFS; then
-    mkdir -p /mnt
-    mount -o subvol=@ "$ROOT_PART" /mnt || {
-      echo "❌ Failed to mount Btrfs subvolume @"
-      exit 1
-    }
+    echo "📦 Mounting temporarily to probe Btrfs subvolumes"
+    mount "$ROOT_PART" /mnt
+
+    echo "📋 Available Btrfs subvolumes:"
+    btrfs subvolume list /mnt
+
+    # Check for @ subvolume
+    if btrfs subvolume list /mnt | grep -q " path @\$"; then
+      echo "✅ Found subvolume @ — remounting properly"
+      umount /mnt
+      mount -o subvol=@ "$ROOT_PART" /mnt
+    else
+      echo "⚠️ Subvolume @ not found. Mounting root as-is"
+      # Keep it mounted to /mnt as root
+    fi
   else
+    echo "📦 Mounting non-Btrfs root"
     mount "$ROOT_PART" /mnt
   fi
 }
+
 
 # Mount /boot and /boot/efi accordingly
 mount_boot() {
