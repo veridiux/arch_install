@@ -10,12 +10,23 @@ echo "$HOSTNAME" > /etc/hostname
 echo "HOSTNAME=\"$HOSTNAME\"" >> config.sh
 
 # --- Timezone ---
+# --- Timezone ---
 DEFAULT_TIMEZONE="America/Chicago"
 read -rp "🌍 What is your timezone? [$DEFAULT_TIMEZONE]: " TIMEZONE
 TIMEZONE=${TIMEZONE:-$DEFAULT_TIMEZONE}
-ln -sf "/usr/share/zoneinfo/$TIMEZONE" /etc/localtime
+
+# Validate timezone
+if ! timedatectl list-timezones | grep -q "^$TIMEZONE$"; then
+  echo "❌ Invalid timezone: $TIMEZONE"
+  exit 1
+fi
+
+echo "🌐 Setting timezone to $TIMEZONE..."
+timedatectl set-timezone "$TIMEZONE"
 hwclock --systohc
+
 echo "TIMEZONE=\"$TIMEZONE\"" >> config.sh
+
 
 # --- Locale ---
 DEFAULT_LOCALE="en_US"
