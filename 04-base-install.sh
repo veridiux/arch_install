@@ -89,42 +89,6 @@ genfstab -U /mnt >> /mnt/etc/fstab
 # fi
 
 
-
-
-# 1. Base install done with pacstrap (already synced and installed base packages)
-
-# 2. Enable multilib repo inside the new system before chroot
-read -rp "📦 Enable multilib repo? [y/N]: " MULTILIB_CHOICE
-MULTILIB_CHOICE=${MULTILIB_CHOICE:-n}
-
-if [[ "$MULTILIB_CHOICE" =~ ^[Yy]$ ]]; then
-  sed -i '/^\s*#\s*\[multilib\]/,/^$/{s/^#//}' /mnt/etc/pacman.conf
-  echo "✅ Multilib repo enabled (will sync on first pacman run in chroot)."
-fi
-
-# 3. Chroot into the new system
-arch-chroot /mnt /bin/bash
-
-# 4. Inside chroot, sync & update once before further installs
-if [[ "$MULTILIB_CHOICE" =~ ^[Yy]$ ]]; then
-  pacman -Syu --noconfirm
-else
-  pacman -Syu --noconfirm
-fi
-
-# 5. Continue installing packages as needed
-
-
-
-
-
-# Save to config
-echo "ENABLE_MULTILIB=\"$ENABLE_MULTILIB\"" >> config.sh
-
-
-
-
-
 # Update package database
 pacman -Sy
 
