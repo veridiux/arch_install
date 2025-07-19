@@ -26,8 +26,16 @@ detect_root_partition() {
 do_chroot() {
   detect_root_partition
 
-  echo "🔍 Mounting $ROOT_PART to /mnt"
-  mount "$ROOT_PART" /mnt
+  # Detect filesystem type of root partition
+  FS_TYPE=$(blkid -o value -s TYPE "$ROOT_PART" || echo "")
+
+  if [[ "$FS_TYPE" == "btrfs" ]]; then
+    echo "Detected Btrfs filesystem, mounting with subvol=@"
+    mount -o subvol=@ "$ROOT_PART" /mnt
+  else
+    echo "Mounting root partition normally (filesystem: $FS_TYPE)"
+    mount "$ROOT_PART" /mnt
+  fi
 
   # Create /mnt/boot if missing
   mkdir -p /mnt/boot
@@ -58,7 +66,6 @@ do_chroot() {
     echo "⚠️ The chroot environment looks like the live environment or hostname is empty."
   fi
 }
-
 
 # Helper: Unmount
 do_unmount() {
