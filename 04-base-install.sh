@@ -66,11 +66,37 @@ echo "🧾 Generating fstab..."
 genfstab -U /mnt >> /mnt/etc/fstab
 
 
-echo "[*] Enabling multilib repository..."
 
-# Uncomment [multilib] and its Include line
-sed -i '/^\s*#\s*\[multilib\]/s/^#//' /etc/pacman.conf
-sed -i '/^\s*#\s*Include = \/etc\/pacman\.d\/mirrorlist/{s/^#//}' /etc/pacman.conf
+
+# --- Multilib (Optional) ---
+read -rp "📦 Do you want to enable the multilib repository? [y/N]: " MULTILIB_CHOICE
+MULTILIB_CHOICE=${MULTILIB_CHOICE:-n}
+
+if [[ "$MULTILIB_CHOICE" =~ ^[Yy]$ ]]; then
+  ENABLE_MULTILIB=true
+  echo "📦 Enabling multilib repository..."
+
+  # Uncomment the [multilib] section
+  sed -i '/^\s*#\s*\[multilib\]/s/^#//' /etc/pacman.conf
+
+  # Uncomment the Include line under [multilib]
+  sed -i '/^\s*#\s*Include\s*=.*\/etc\/pacman\.d\/mirrorlist/s/^#//' /etc/pacman.conf
+
+  # Refresh package database
+  pacman -Sy
+
+  echo "✅ Multilib repository enabled."
+else
+  ENABLE_MULTILIB=false
+  echo "⏭️ Skipping multilib setup."
+fi
+
+# Save to config
+echo "ENABLE_MULTILIB=\"$ENABLE_MULTILIB\"" >> config.sh
+
+
+
+
 
 # Update package database
 pacman -Sy

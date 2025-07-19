@@ -14,33 +14,6 @@ echo "🛠️ Entering chroot environment to configure system..."
 
 arch-chroot /mnt /bin/bash <<'EOF'
 
-# --- Hostname ---
-echo "🖥️ Setting hostname..."
-echo "$HOSTNAME" > /etc/hostname
-
-# --- Timezone ---
-echo "🌐 Setting timezone..."
-ln -sf /usr/share/zoneinfo/$TIMEZONE /etc/localtime
-hwclock --systohc
-
-# --- Locale ---
-echo "🗣️ Configuring locale..."
-sed -i "s/^#$LOCALE UTF-8/$LOCALE UTF-8/" /etc/locale.gen
-locale-gen
-echo "LANG=$LOCALE" > /etc/locale.conf
-
-# --- Keymap ---
-echo "KEYMAP=us" > /etc/vconsole.conf
-
-# --- Multilib (Optional) ---
-if [ "$ENABLE_MULTILIB" = "true" ]; then
-  echo "📦 Enabling multilib repository..."
-  sed -i '/\[multilib\]/,/Include/ s/^#//' /etc/pacman.conf
-  pacman -Sy
-else
-  echo "⏭️ Skipping multilib repository setup."
-fi
-
 # --- Initramfs ---
 echo "🧰 Rebuilding initramfs..."
 mkinitcpio -P
