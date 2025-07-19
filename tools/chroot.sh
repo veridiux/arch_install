@@ -1,73 +1,78 @@
 #!/bin/bash
 set -euo pipefail
 
-MNT_DIR="/mnt"
+echo "🔧 Arch Auto-Chroot Tool"
 
-show_menu() {
-  echo "🛠️ Chroot Manager"
-  echo "1) 🔐 Mount & Chroot"
-  echo "2) 🚪 Unmount & Exit Chroot"
-  echo "0) ❌ Cancel"
-  echo
-  read -rp "Choose an option: " CHOICE
-}
+# Let user choose action
+PS3="Choose an option: "
+options=("Chroot into system" "Unmount and exit" "Quit")
+select opt in "${options[@]}"; do
+  case $opt in
+    "Chroot into system")
+      break
+      ;;
+    "Unmount and exit")
+      echo "📦 Unmounting /mnt..."
+      umount -R /mnt && echo "✅ Unmounted successfully." || echo "⚠️ Failed to unmount /mnt."
+      exit 0
+      ;;
+    "Quit")
+      exit 0
+      ;;
+    *)
+      echo "❌ Invalid option."
+      ;;
+  esac
+done
 
-mount_and_chroot() {
-  echo "🔍 Searching for root partition..."
+echo "🔍 Detecting Linux root partition..."
 
-  # Try auto-detection
-  ROOT_PART=$(lsblk -rpno NAME,MOUNTPOINT | grep " /$" | cut -d' ' -f1)
+# Try to auto-detect Linux root partition
+ROOT_PART=$(lsblk -rpno NAME,MOUNTPOINT,FSTYPE | grep -E "ext4|btrfs|xfs" | grep -v "boot\|efi" | awk '!/\/mnt/{print $1}' | head -n 1)
 
-  # Fallback: find the largest ext4/btrfs root partition
-  if [[ -z "$ROOT_PART" ]]; then
-    ROOT_PART=$(lsblk -rpno NAME,FSTYPE,SIZE | grep -E "ext4|btrfs" | sort -hk3 | tail -n1 | awk '{print $1}')
-    echo "⚠️ No mounted / detected. Guessing largest ext4/btrfs: $ROOT_PART"
+if [[ -z "$ROOT_PART" ]]; then
+  echo "❌ Could not auto-detect root partition. Please enter it manually (e.g. /dev/sda3 or /dev/nvme0n1p3):"
+  read -r ROOT_PART
+fi
+
+echo "🔧 Mounting root: $ROOT_PART"
+mount "$ROOT_PART" /mnt
+
+# Optional: Try to mount boot and EFI if they exist
+echo "🔍 Checking for separate boot or EFI partitions..."
+for part in $(lsblk -rpno NAME,FSTYPE | grep -Ei 'fat|vfat|boot' | awk '{print $1}'); do
+  if blkid "$part" | grep -qi efi; then
+    echo "🧷 Mounting EFI partition: $part"
+    mkdir -p /mnt/boot/efi
+    mount "$part" /mnt/boot/efi
+  elif blkid "$part" | grep -qi boot; then
+    echo "🧷 Mounting boot partition: $part"
+    mkdir -p /mnt/boot
+    mount "$part" /mnt/boot
   fi
+done
 
-  if [[ -z "$ROOT_PART" ]]; then
-    echo "❌ Could not determine root partition."
-    exit 1
-  fi
+# Optional: Try mounting home
+HOME_PART=$(lsblk -rpno NAME,MOUNTPOINT,FSTYPE | grep -i home | awk '{print $1}')
+if [[ -n "$HOME_PART" ]]; then
+  echo "🏠 Mounting home: $HOME_PART"
+  mkdir -p /mnt/home
+  mount "$HOME_PART" /mnt/home
+fi
 
-  echo "📦 Mounting root partition: $ROOT_PART"
-  mount "$ROOT_PART" "$MNT_DIR"
+# Bind special filesystems
+for dir in dev proc sys run; do
+  mount --bind /$dir /mnt/$dir
+done
 
-  echo "🔧 Binding system directories..."
-  for dir in proc sys dev run; do
-    mount --bind /$dir "$MNT_DIR/$dir"
-  done
+# Enter chroot
+echo "🚪 Entering chroot..."
+chroot /mnt /bin/bash
 
-  # Mount EFI if detected
-  if [ -d "$MNT_DIR/boot/efi" ]; then
-    EFI_PART=$(lsblk -rpno NAME,MOUNTPOINT | grep " /boot/efi$" | cut -d' ' -f1)
-    if [[ -n "$EFI_PART" ]]; then
-      echo "🔧 Mounting EFI: $EFI_PART"
-      mount "$EFI_PART" "$MNT_DIR/boot/efi"
-    fi
-  fi
-
-  echo "🚪 Entering chroot..."
-  chroot "$MNT_DIR" /bin/bash
-}
-
-unmount_chroot() {
-  echo "🔧 Unmounting system directories from $MNT_DIR..."
-  for dir in run dev sys proc; do
-    umount -R "$MNT_DIR/$dir" 2>/dev/null || echo "⚠️ Could not unmount $dir"
-  done
-
-  # Optional: try to unmount boot/efi and root
-  umount "$MNT_DIR/boot/efi" 2>/dev/null || true
-  umount "$MNT_DIR" 2>/dev/null || true
-
-  echo "✅ Unmount complete. System clean."
-}
-
-### MAIN MENU LOOP
-show_menu
-case "$CHOICE" in
-  1) mount_and_chroot ;;
-  2) unmount_chroot ;;
-  0) echo "❎ Cancelled." ;;
-  *) echo "❌ Invalid choice." ;;
-esac
+# After exit
+echo "📦 Cleaning up..."
+for dir in dev proc sys run; do
+  umount -lf /mnt/$dir || true
+done
+umount -R /mnt || true
+echo "✅ Unmounted. Chroot session complete."
