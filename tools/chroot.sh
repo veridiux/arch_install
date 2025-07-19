@@ -6,7 +6,8 @@ echo "1) Chroot into system"
 echo "2) Unmount and clean up"
 read -rp "Select option [1-2]: " OPTION
 
-detect_root_partition() {
+# Helper: Check if device is NVMe or SATA
+detect_partitions() {
   if lsblk | grep -q "nvme0n1p"; then
     echo "Detected NVMe drive"
     BOOT_PART="/dev/nvme0n1p1"
@@ -21,29 +22,25 @@ detect_root_partition() {
   fi
 }
 
+# Mount logic
 do_chroot() {
-  detect_root_partition
+  detect_partitions
 
-  FS_TYPE=$(blkid -o value -s TYPE "$ROOT_PART")
+  echo "🔍 Mounting $ROOT_PART to /mnt (initial)"
+  mount "$ROOT_PART" /mnt
 
-  echo "📦 Filesystem on root: $FS_TYPE"
-
-  mkdir -p /mnt
-
+  # Check for Btrfs
+  FS_TYPE=$(lsblk -no FSTYPE "$ROOT_PART")
   if [[ "$FS_TYPE" == "btrfs" ]]; then
-    echo "🔍 Mounting Btrfs root temporarily to inspect subvolumes..."
-    mount "$ROOT_PART" /mnt
+    echo "📦 Detected Btrfs filesystem"
+
     if btrfs subvolume list /mnt | grep -q "path @"; then
-      echo "✅ Subvolume @ found. Re-mounting with subvol=@"
+      echo "✅ Found subvolume '@', remounting with subvol=@"
       umount /mnt
       mount -o subvol=@ "$ROOT_PART" /mnt
     else
-      echo "⚠️ Subvolume @ not found. Using full Btrfs root."
-      # Already mounted
+      echo "ℹ️ No '@' subvolume found, using root of Btrfs volume"
     fi
-  else
-    echo "🔍 Mounting root (non-Btrfs)"
-    mount "$ROOT_PART" /mnt
   fi
 
   mkdir -p /mnt/boot
@@ -60,23 +57,28 @@ do_chroot() {
 
   echo "✅ Environment prepared. Entering chroot..."
 
+  # Get installed hostname (used to confirm chroot)
   INSTALLED_HOSTNAME=$(chroot /mnt hostnamectl status --static 2>/dev/null)
+
+  # Enter chroot shell
   chroot /mnt /bin/bash
 
   echo "🧪 Checking if chroot was successful..."
   if [[ "$INSTALLED_HOSTNAME" != "archiso" && -n "$INSTALLED_HOSTNAME" ]]; then
     echo "✅ You were inside your installed system with hostname: $INSTALLED_HOSTNAME"
   else
-    echo "⚠️ The chroot environment looks like the live environment or hostname is empty."
+    echo "⚠️ The chroot environment looks like the live ISO or hostname is not set."
   fi
 }
 
+# Unmounting
 do_unmount() {
   echo "🔻 Unmounting all partitions..."
   umount -R /mnt || echo "⚠️ Some mounts failed to unmount"
   echo "✅ All cleaned up."
 }
 
+# Menu choice
 case "$OPTION" in
   1) do_chroot ;;
   2) do_unmount ;;
