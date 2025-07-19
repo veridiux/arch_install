@@ -6,46 +6,86 @@ echo "1) Chroot into system"
 echo "2) Unmount and clean up"
 read -rp "Select option [1-2]: " OPTION
 
-# Helper: Check if device is NVMe or SATA
+BOOT_PART=""
+ROOT_PART=""
+IS_BTRFS=false
+IS_UEFI=false
+
+# Detect partitions based on device
 detect_partitions() {
   if lsblk | grep -q "nvme0n1p"; then
-    echo "Detected NVMe drive"
+    echo "📦 Detected NVMe drive"
     BOOT_PART="/dev/nvme0n1p1"
     ROOT_PART="/dev/nvme0n1p2"
   elif lsblk | grep -q "sda"; then
-    echo "Detected SATA/ATA drive"
+    echo "📦 Detected SATA/ATA drive"
     BOOT_PART="/dev/sda1"
     ROOT_PART="/dev/sda2"
   else
-    echo "❌ Could not detect root partition."
+    echo "❌ Could not detect partitions"
     exit 1
   fi
 }
 
-# Mount logic
+# Detect if the system is UEFI
+detect_firmware_type() {
+  if [ -d /sys/firmware/efi ]; then
+    IS_UEFI=true
+    echo "🧭 UEFI system detected"
+  else
+    IS_UEFI=false
+    echo "🧭 BIOS (Legacy) system detected"
+  fi
+}
+
+# Check if Btrfs is used
+detect_btrfs() {
+  fstype=$(blkid -o value -s TYPE "$ROOT_PART")
+  if [[ "$fstype" == "btrfs" ]]; then
+    IS_BTRFS=true
+    echo "📁 Btrfs filesystem detected on root"
+  else
+    IS_BTRFS=false
+    echo "📁 Filesystem: $fstype"
+  fi
+}
+
+# Mount the root filesystem
+mount_root() {
+  echo "🔍 Mounting root ($ROOT_PART) to /mnt"
+
+  if $IS_BTRFS; then
+    mkdir -p /mnt
+    mount -o subvol=@ "$ROOT_PART" /mnt || {
+      echo "❌ Failed to mount Btrfs subvolume @"
+      exit 1
+    }
+  else
+    mount "$ROOT_PART" /mnt
+  fi
+}
+
+# Mount /boot and /boot/efi accordingly
+mount_boot() {
+  mkdir -p /mnt/boot
+
+  if $IS_UEFI; then
+    mkdir -p /mnt/boot/efi
+    echo "🔍 Mounting EFI partition ($BOOT_PART) to /mnt/boot/efi"
+    mount "$BOOT_PART" /mnt/boot/efi
+  else
+    echo "🔍 Mounting boot partition ($BOOT_PART) to /mnt/boot"
+    mount "$BOOT_PART" /mnt/boot
+  fi
+}
+
+# Perform the chroot
 do_chroot() {
   detect_partitions
-
-  echo "🔍 Mounting $ROOT_PART to /mnt (initial)"
-  mount "$ROOT_PART" /mnt
-
-  # Check for Btrfs
-  FS_TYPE=$(lsblk -no FSTYPE "$ROOT_PART")
-  if [[ "$FS_TYPE" == "btrfs" ]]; then
-    echo "📦 Detected Btrfs filesystem"
-
-    if btrfs subvolume list /mnt | grep -q "path @"; then
-      echo "✅ Found subvolume '@', remounting with subvol=@"
-      umount /mnt
-      mount -o subvol=@ "$ROOT_PART" /mnt
-    else
-      echo "ℹ️ No '@' subvolume found, using root of Btrfs volume"
-    fi
-  fi
-
-  mkdir -p /mnt/boot
-  echo "🔍 Mounting boot partition ($BOOT_PART)"
-  mount "$BOOT_PART" /mnt/boot
+  detect_firmware_type
+  detect_btrfs
+  mount_root
+  mount_boot
 
   echo "🔗 Binding system directories..."
   mount --types proc /proc /mnt/proc
@@ -57,30 +97,35 @@ do_chroot() {
 
   echo "✅ Environment prepared. Entering chroot..."
 
-  # Get installed hostname (used to confirm chroot)
-  INSTALLED_HOSTNAME=$(chroot /mnt hostnamectl status --static 2>/dev/null)
+  INSTALLED_HOSTNAME=$(chroot /mnt hostnamectl status --static 2>/dev/null || echo "unknown")
 
-  # Enter chroot shell
   chroot /mnt /bin/bash
 
-  echo "🧪 Checking if chroot was successful..."
+  echo "🧪 Chroot exited. Hostname inside was: $INSTALLED_HOSTNAME"
   if [[ "$INSTALLED_HOSTNAME" != "archiso" && -n "$INSTALLED_HOSTNAME" ]]; then
-    echo "✅ You were inside your installed system with hostname: $INSTALLED_HOSTNAME"
+    echo "✅ You were inside your installed system!"
   else
-    echo "⚠️ The chroot environment looks like the live ISO or hostname is not set."
+    echo "⚠️ Chroot may not have entered the installed system."
   fi
 }
 
-# Unmounting
+# Cleanup
 do_unmount() {
-  echo "🔻 Unmounting all partitions..."
+  echo "🔻 Unmounting all partitions from /mnt"
   umount -R /mnt || echo "⚠️ Some mounts failed to unmount"
   echo "✅ All cleaned up."
 }
 
-# Menu choice
+# Run
 case "$OPTION" in
-  1) do_chroot ;;
-  2) do_unmount ;;
-  *) echo "❌ Invalid option." && exit 1 ;;
+  1)
+    do_chroot
+    ;;
+  2)
+    do_unmount
+    ;;
+  *)
+    echo "❌ Invalid option."
+    exit 1
+    ;;
 esac
