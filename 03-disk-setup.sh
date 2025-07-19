@@ -187,7 +187,7 @@ if [[ "$AUTOPART" == "y" ]]; then
     parted "$DRIVE" --script mklabel gpt
     parted "$DRIVE" --script mkpart primary fat32 1MiB 512MiB
     parted "$DRIVE" --script set 1 esp on
-    BOOT_PART="${DRIVE}1"
+    BOOT_PART=$(make_part_name "$DRIVE" "1")
     next_part=2
     start_after_boot=512
 
@@ -207,7 +207,7 @@ if [[ "$AUTOPART" == "y" ]]; then
       echo "📛 Using MBR (msdos)..."
       parted "$DRIVE" --script mklabel msdos
       parted "$DRIVE" --script mkpart primary ext4 1MiB 512MiB
-      BOOT_PART="${DRIVE}1"
+      BOOT_PART=$(make_part_name "$DRIVE" "1")
       next_part=2
       start_after_boot=512
     fi
