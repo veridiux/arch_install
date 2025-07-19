@@ -80,7 +80,7 @@ if [[ "$MULTILIB_CHOICE" =~ ^[Yy]$ ]]; then
   sed -i '/^\s*#\s*Include\s*=.*\/etc\/pacman\.d\/mirrorlist/s/^#//' /etc/pacman.conf
 
   # Refresh package database
-  pacman -Sy
+  # pacman -Sy
 
   echo "✅ Multilib repository enabled."
 else
