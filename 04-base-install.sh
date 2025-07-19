@@ -50,9 +50,9 @@ printf '  - %s\n' "${BASE_PACKAGES[@]}"
 echo "🚀 Installing base packages..."
 pacstrap -K /mnt "${BASE_PACKAGES[@]}"
 
-# Pause here to inspect packages
-echo "⏸️  Packages after bootloader selection:"
-printf '  - %s\n' "${BASE_PACKAGES[@]}"
+# # Pause here to inspect packages
+# echo "⏸️  Packages after bootloader selection:"
+# printf '  - %s\n' "${BASE_PACKAGES[@]}"
 
 # Copy over config.sh and swap info if it exists
 cp ./config.sh /mnt/root/
@@ -97,8 +97,6 @@ echo "ENABLE_MULTILIB=\"$ENABLE_MULTILIB\"" >> config.sh
 
 # Update package database
 pacman -Sy
-
-echo "[+] Multilib repository enabled."
 
 echo "✅ Base system installed and fstab generated."
 echo "➡️ Ready to chroot in next step."
