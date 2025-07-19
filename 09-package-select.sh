@@ -129,7 +129,7 @@ enable_services() {
     arch-chroot /mnt systemctl enable NetworkManager
     arch-chroot /mnt systemctl start NetworkManager
     check_service NetworkManager
-    read -rp "Press Enter after verifying NetworkManager..."
+    # read -rp "Press Enter after verifying NetworkManager..."
   fi
 
   if [[ "$ENABLE_BLUETOOTH" == "yes" ]]; then
@@ -137,7 +137,7 @@ enable_services() {
     arch-chroot /mnt systemctl enable bluetooth
     arch-chroot /mnt systemctl start bluetooth
     check_service bluetooth
-    read -rp "Press Enter after verifying Bluetooth..."
+    # read -rp "Press Enter after verifying Bluetooth..."
   fi
 
   if [[ "$ENABLE_PRINTING" == "yes" ]]; then
@@ -145,7 +145,7 @@ enable_services() {
     arch-chroot /mnt systemctl enable cups
     arch-chroot /mnt systemctl start cups
     check_service cups
-    read -rp "Press Enter after verifying CUPS..."
+    # read -rp "Press Enter after verifying CUPS..."
   fi
 
   if [[ "$ENABLE_VIRTUALIZATION" == "yes" ]]; then
@@ -159,7 +159,7 @@ enable_services() {
       echo "⚠️ USERNAME not set, skipping usermod for libvirt group"
     fi
     check_service libvirtd
-    read -rp "Press Enter after verifying libvirtd and usermod..."
+    # read -rp "Press Enter after verifying libvirtd and usermod..."
   fi
 
   if [[ "$ENABLE_AUDIO" == "yes" ]]; then
@@ -174,7 +174,7 @@ enable_services() {
     else
       echo "⚠️ USERNAME not set, skipping pipewire user services enabling"
     fi
-    read -rp "Press Enter after verifying PipeWire user services..."
+    # read -rp "Press Enter after verifying PipeWire user services..."
   fi
 
   echo "✅ Service enabling complete."
