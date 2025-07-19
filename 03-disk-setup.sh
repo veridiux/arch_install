@@ -156,7 +156,8 @@ if [[ "$AUTOPART" == "y" ]]; then
 
 
         echo "✅ Created $HOME_PART for /home"
-        mkfs.$HOME_FS_TYPE "$HOME_PART"
+        mkfs_with_force "$HOME_FS_TYPE" "$HOME_PART"
+
 
 
 
@@ -188,7 +189,8 @@ if [[ "$AUTOPART" == "y" ]]; then
         fi
 
         echo "✅ Created $HOME_PART for /home (${HOME_SIZE_GB}GiB)"
-        mkfs.$HOME_FS_TYPE "$HOME_PART"
+        mkfs_with_force "$HOME_FS_TYPE" "$HOME_PART"
+
       fi
 
     
