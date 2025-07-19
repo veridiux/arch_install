@@ -16,7 +16,7 @@ SWAP_SIZE=""  # e.g., 2G
 FS_TYPE="ext4"
 
 # Multilib support
-ENABLE_MULTILIB=true  # Set to true to enable multilib repo (needed for Steam, Wine, etc)
+ENABLE_MULTILIB=""  # Set to true to enable multilib repo (needed for Steam, Wine, etc)
 
 # Hostname and locale
 HOSTNAME=""

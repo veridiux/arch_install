@@ -61,11 +61,6 @@ FIRMWARE_MODE="$FIRMWARE_MODE"
 DRIVE="$DRIVE"
 EOF
 
-# Update packages before chroot
-pacman -Syu --noconfirm
-
-
-
 
 
 # Save to config
@@ -76,6 +71,12 @@ echo "ENABLE_MULTILIB=\"$ENABLE_MULTILIB\"" >> config.sh
 
 
 arch-chroot /mnt /bin/bash <<'EOF'
+
+# --- Optiona: sync packages after anbling multilib ---
+if [[ "$ENABLE_MULTILIB" =~ ^[Yy]$ ]]; then
+  echo "🔄 Updating system (multilib enabled)..."
+  pacman -Syu --noconfirm
+fi
 
 
 # --- Locale & Clock (deferred to chroot) ---
