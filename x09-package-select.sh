@@ -7,6 +7,20 @@ echo "🎁 Optional Package Sets"
 
 declare -A PACKAGE_SETS
 
+# Define named sets here for easy extension
+# PACKAGE_SETS=(
+#   ["Dev Tools"]="git base-devel cmake python python-pip"
+#   ["Browsers"]="firefox chromium"
+#   ["Gaming"]="steam lutris mangohud"
+#   ["Media"]="vlc mpv ffmpeg"
+#   ["Office"]="libreoffice-fresh hunspell-en_us"
+#   ["Bluetooth"]="bluez bluez-utils blueman"
+#   ["Utility"]="rsync zip unzip tar rsync"
+#   ["Custom"]="wget git networkmanager curl vim neovim network-manager-applet"
+#   ["Audio"]="pipewire pipewire-alsa pipewire-pulse pipewire-jack wireplumber pavucontrol"
+# )
+
+
 PACKAGE_SETS=(
   ["Dev Tools"]="git base-devel cmake python python-pip gcc make gdb pkgconf"
   ["Browsers"]="firefox chromium"
@@ -24,6 +38,11 @@ PACKAGE_SETS=(
   ["Shell Tools"]="zsh zsh-completions zsh-autosuggestions zsh-syntax-highlighting"
   ["Theming"]="lxappearance papirus-icon-theme kvantum qt5ct"
 )
+
+
+
+
+
 
 SELECTED_PACKAGES=()
 
@@ -43,13 +62,13 @@ while true; do
   elif [[ -n "${SET_KEYS[$SET_CHOICE]}" ]]; then
     SET_NAME="${SET_KEYS[$SET_CHOICE]}"
     echo "✅ Added: $SET_NAME"
-    # Use quotes to avoid word splitting issues
     SELECTED_PACKAGES+=(${PACKAGE_SETS[$SET_NAME]})
   else
     echo "❌ Invalid choice."
   fi
 done
 
+# Allow custom packages
 echo ""
 read -rp "📦 Enter additional individual packages (space-separated), or press Enter to skip: " CUSTOM_INPUT
 
@@ -59,17 +78,11 @@ if [[ -n "$CUSTOM_INPUT" ]]; then
 fi
 
 # Remove duplicates
-# Save old IFS, set to newline, sort unique, restore IFS
-OLDIFS=$IFS
-IFS=$'\n'
-UNIQUE_PACKS=($(printf "%s\n" "${SELECTED_PACKAGES[@]}" | sort -u))
-IFS=$OLDIFS
+UNIQUE_PACKS=($(echo "${SELECTED_PACKAGES[@]}" | tr ' ' '\n' | sort -u | tr '\n' ' '))
 
 if [[ ${#UNIQUE_PACKS[@]} -gt 0 ]]; then
   echo "📦 Final package list:"
-  for pkg in "${UNIQUE_PACKS[@]}"; do
-    echo "  - $pkg"
-  done
+  printf '  - %s\n' "${UNIQUE_PACKS[@]}"
 
   echo "📥 Installing packages..."
   arch-chroot /mnt pacman -Sy --noconfirm "${UNIQUE_PACKS[@]}"
@@ -77,110 +90,47 @@ else
   echo "ℹ️ No extra packages selected."
 fi
 
+# Optional: Save the list for auditing
 printf "%s\n" "${UNIQUE_PACKS[@]}" > /mnt/root/installed-extra-packages.txt
 
-# Dynamically set enable flags based on selected packages
-ENABLE_NETWORKMANAGER="no"
-ENABLE_BLUETOOTH="no"
-ENABLE_PRINTING="no"
-ENABLE_VIRTUALIZATION="no"
-ENABLE_AUDIO="no"
 
-for pkg in "${UNIQUE_PACKS[@]}"; do
-  case $pkg in
-    networkmanager|network-manager-applet)
-      ENABLE_NETWORKMANAGER="yes"
-      ;;
-    bluez|blueman)
-      ENABLE_BLUETOOTH="yes"
-      ;;
-    cups|system-config-printer|gutenprint)
-      ENABLE_PRINTING="yes"
-      ;;
-    libvirt|virt-manager|qemu)
-      ENABLE_VIRTUALIZATION="yes"
-      ;;
-    pipewire|pipewire-pulse|wireplumber)
-      ENABLE_AUDIO="yes"
-      ;;
-  esac
-done
+
 
 enable_services() {
   echo "🔧 Enabling services inside chroot..."
 
-  check_service() {
-    local svc="$1"
-    if arch-chroot /mnt systemctl is-enabled --quiet "$svc"; then
-      echo "   ✅ $svc service is enabled."
-    else
-      echo "   ❌ $svc service is NOT enabled."
-    fi
-
-    if arch-chroot /mnt systemctl is-active --quiet "$svc"; then
-      echo "   ✅ $svc service is running."
-    else
-      echo "   ⚠️ $svc service is NOT running."
-    fi
-  }
-
+  # System services
   if [[ "$ENABLE_NETWORKMANAGER" == "yes" ]]; then
     echo " - Enabling NetworkManager"
     arch-chroot /mnt systemctl enable NetworkManager
-    arch-chroot /mnt systemctl start NetworkManager
-    check_service NetworkManager
-    read -rp "Press Enter after verifying NetworkManager..."
   fi
 
   if [[ "$ENABLE_BLUETOOTH" == "yes" ]]; then
     echo " - Enabling Bluetooth"
     arch-chroot /mnt systemctl enable bluetooth
-    arch-chroot /mnt systemctl start bluetooth
-    check_service bluetooth
-    read -rp "Press Enter after verifying Bluetooth..."
   fi
 
   if [[ "$ENABLE_PRINTING" == "yes" ]]; then
     echo " - Enabling CUPS (printing)"
     arch-chroot /mnt systemctl enable cups
-    arch-chroot /mnt systemctl start cups
-    check_service cups
-    read -rp "Press Enter after verifying CUPS..."
   fi
 
   if [[ "$ENABLE_VIRTUALIZATION" == "yes" ]]; then
     echo " - Enabling libvirtd (virtualization)"
     arch-chroot /mnt systemctl enable libvirtd
-    arch-chroot /mnt systemctl start libvirtd
-    if [[ -n "$USERNAME" ]]; then
-      arch-chroot /mnt usermod -aG libvirt "$USERNAME"
-      echo " - Added $USERNAME to libvirt group"
-    else
-      echo "⚠️ USERNAME not set, skipping usermod for libvirt group"
-    fi
-    check_service libvirtd
-    read -rp "Press Enter after verifying libvirtd and usermod..."
+    # Add user to libvirt group
+    arch-chroot /mnt usermod -aG libvirt "$USERNAME"
   fi
 
+  # User services for audio (pipewire)
   if [[ "$ENABLE_AUDIO" == "yes" ]]; then
     echo " - Enabling user audio services (PipeWire)"
-    if [[ -n "$USERNAME" ]]; then
-      arch-chroot /mnt sudo -u "$USERNAME" systemctl --user enable pipewire pipewire-pulse wireplumber || echo "⚠️ Could not enable pipewire user services"
-      arch-chroot /mnt sudo -u "$USERNAME" systemctl --user start pipewire pipewire-pulse wireplumber || echo "⚠️ Could not start pipewire user services"
-      # Check user services status:
-      echo "   Checking PipeWire user services status (may require user login)..."
-      arch-chroot /mnt sudo -u "$USERNAME" systemctl --user is-enabled pipewire && echo "   ✅ pipewire enabled" || echo "   ❌ pipewire NOT enabled"
-      arch-chroot /mnt sudo -u "$USERNAME" systemctl --user is-active pipewire && echo "   ✅ pipewire running" || echo "   ⚠️ pipewire NOT running"
-    else
-      echo "⚠️ USERNAME not set, skipping pipewire user services enabling"
-    fi
-    read -rp "Press Enter after verifying PipeWire user services..."
+    arch-chroot /mnt sudo -u "$USERNAME" systemctl --user enable pipewire pipewire-pulse wireplumber || echo "⚠️ Could not enable pipewire user services (this may require user login)"
+    arch-chroot /mnt sudo -u "$USERNAME" systemctl --user start pipewire pipewire-pulse wireplumber || echo "⚠️ Could not start pipewire user services"
   fi
 
   echo "✅ Service enabling complete."
 }
 
 enable_services
-
 echo "✅ Extra package installation complete."
-
