@@ -37,9 +37,6 @@ make_part_name() {
 }
 
 
-
-
-
 list_other_drives() {
   local exclude_drive="$1"
   echo "Available drives (excluding $exclude_drive):"
@@ -49,6 +46,48 @@ list_other_drives() {
     fi
   done
 }
+
+
+mkfs_with_force() {
+	  local fs_type=$1
+	  local part=$2
+
+	  echo "🧪 mkfs_with_force called with fs_type=$fs_type, part=$part" >&2
+
+	  echo "🔧 Attempting to unmount $part..." >&2
+	  if ! umount "$part" 2>/dev/null; then
+		echo "⚠️  Warning: $part was not mounted or failed to unmount (not fatal)" >&2
+	  fi
+
+	  echo "💾 Formatting $part as $fs_type..." >&2
+
+	  case "$fs_type" in
+		ext4)
+		  echo "+ Running: mkfs.ext4 -F $part" >&2
+		  mkfs.ext4 -F "$part" ;;
+		xfs)
+		  echo "+ Running: mkfs.xfs -f $part" >&2
+		  mkfs.xfs -f "$part" ;;
+		f2fs)
+		  echo "+ Running: mkfs.f2fs -f $part" >&2
+		  mkfs.f2fs -f "$part" ;;
+		btrfs)
+		  echo "+ Running: mkfs.btrfs -f $part" >&2
+		  mkfs.btrfs -f "$part" ;;
+		*)
+		  echo "❌ Unknown filesystem type: $fs_type" >&2
+		  return 1
+		  ;;
+	  esac
+
+	  local result=$?
+	  if [ $result -ne 0 ]; then
+		echo "❌ mkfs.$fs_type failed with exit code $result on $part" >&2
+		exit $result
+	  else
+		echo "✅ mkfs.$fs_type succeeded on $part" >&2
+	  fi
+	}
 
 
 if [[ "$AUTOPART" == "y" ]]; then
@@ -328,46 +367,7 @@ if [[ "$AUTOPART" == "y" ]]; then
 
 
 
-  mkfs_with_force() {
-	  local fs_type=$1
-	  local part=$2
-
-	  echo "🧪 mkfs_with_force called with fs_type=$fs_type, part=$part" >&2
-
-	  echo "🔧 Attempting to unmount $part..." >&2
-	  if ! umount "$part" 2>/dev/null; then
-		echo "⚠️  Warning: $part was not mounted or failed to unmount (not fatal)" >&2
-	  fi
-
-	  echo "💾 Formatting $part as $fs_type..." >&2
-
-	  case "$fs_type" in
-		ext4)
-		  echo "+ Running: mkfs.ext4 -F $part" >&2
-		  mkfs.ext4 -F "$part" ;;
-		xfs)
-		  echo "+ Running: mkfs.xfs -f $part" >&2
-		  mkfs.xfs -f "$part" ;;
-		f2fs)
-		  echo "+ Running: mkfs.f2fs -f $part" >&2
-		  mkfs.f2fs -f "$part" ;;
-		btrfs)
-		  echo "+ Running: mkfs.btrfs -f $part" >&2
-		  mkfs.btrfs -f "$part" ;;
-		*)
-		  echo "❌ Unknown filesystem type: $fs_type" >&2
-		  return 1
-		  ;;
-	  esac
-
-	  local result=$?
-	  if [ $result -ne 0 ]; then
-		echo "❌ mkfs.$fs_type failed with exit code $result on $part" >&2
-		exit $result
-	  else
-		echo "✅ mkfs.$fs_type succeeded on $part" >&2
-	  fi
-	}
+  
   
   # Format root partition with check
   current_fs=$(detect_fs "$ROOT_PART")
