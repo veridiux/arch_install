@@ -113,11 +113,8 @@ if [[ "$AUTOPART" == "y" ]]; then
         parted "$HOME_DRIVE" --script mkpart primary 1MiB 100%
 
         # Handle NVMe naming
-        if [[ "$HOME_DRIVE" =~ ^/dev/nvme ]]; then
-          HOME_PART="${HOME_DRIVE}p1"
-        else
-          HOME_PART="${HOME_DRIVE}1"
-        fi
+        HOME_PART=$(make_part_name "$HOME_DRIVE" "1")
+
 
         echo "✅ Created $HOME_PART for /home"
         mkfs.$HOME_FS_TYPE "$HOME_PART"
@@ -198,7 +195,7 @@ if [[ "$AUTOPART" == "y" ]]; then
       parted "$DRIVE" --script mklabel gpt
       parted "$DRIVE" --script mkpart primary 1MiB 3MiB
       parted "$DRIVE" --script set 1 bios_grub on
-      BIOS_GRUB_PART="${DRIVE}1"
+      BIOS_GRUB_PART=$(make_part_name "$DRIVE" "1")
       parted "$DRIVE" --script mkpart primary ext4 3MiB 512MiB
       BOOT_PART="${DRIVE}2"
       next_part=3
@@ -300,7 +297,7 @@ if [[ "$AUTOPART" == "y" ]]; then
   
   # Create swap partition
   parted "$DRIVE" --script mkpart primary linux-swap "${SWAP_START}MiB" "${SWAP_END}MiB"
-  SWAP_PART="${DRIVE}${next_part}"
+  SWAP_PART=$(make_part_name "$DRIVE" "$next_part")
   next_part=$((next_part + 1))
   
   # Create root partition from end of swap to 100%
