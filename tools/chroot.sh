@@ -1,78 +1,73 @@
 #!/bin/bash
-set -euo pipefail
+set -e
 
-echo "🔧 Arch Auto-Chroot Tool"
+echo "🔧 Auto Chroot Tool (Arch Linux)"
+echo "1) Chroot into system"
+echo "2) Unmount and clean up"
+read -rp "Select option [1-2]: " OPTION
 
-# Let user choose action
-PS3="Choose an option: "
-options=("Chroot into system" "Unmount and exit" "Quit")
-select opt in "${options[@]}"; do
-  case $opt in
-    "Chroot into system")
-      break
-      ;;
-    "Unmount and exit")
-      echo "📦 Unmounting /mnt..."
-      umount -R /mnt && echo "✅ Unmounted successfully." || echo "⚠️ Failed to unmount /mnt."
-      exit 0
-      ;;
-    "Quit")
-      exit 0
-      ;;
-    *)
-      echo "❌ Invalid option."
-      ;;
-  esac
-done
-
-echo "🔍 Detecting Linux root partition..."
-
-# Try to auto-detect Linux root partition
-ROOT_PART=$(lsblk -rpno NAME,MOUNTPOINT,FSTYPE | grep -E "ext4|btrfs|xfs" | grep -v "boot\|efi" | awk '!/\/mnt/{print $1}' | head -n 1)
-
-if [[ -z "$ROOT_PART" ]]; then
-  echo "❌ Could not auto-detect root partition. Please enter it manually (e.g. /dev/sda3 or /dev/nvme0n1p3):"
-  read -r ROOT_PART
-fi
-
-echo "🔧 Mounting root: $ROOT_PART"
-mount "$ROOT_PART" /mnt
-
-# Optional: Try to mount boot and EFI if they exist
-echo "🔍 Checking for separate boot or EFI partitions..."
-for part in $(lsblk -rpno NAME,FSTYPE | grep -Ei 'fat|vfat|boot' | awk '{print $1}'); do
-  if blkid "$part" | grep -qi efi; then
-    echo "🧷 Mounting EFI partition: $part"
-    mkdir -p /mnt/boot/efi
-    mount "$part" /mnt/boot/efi
-  elif blkid "$part" | grep -qi boot; then
-    echo "🧷 Mounting boot partition: $part"
-    mkdir -p /mnt/boot
-    mount "$part" /mnt/boot
+# Helper: Check if device is NVMe or standard
+detect_root_partition() {
+  if lsblk | grep -q "nvme0n1p"; then
+    echo "Detected NVMe drive"
+    BOOT_PART="/dev/nvme0n1p1"
+    ROOT_PART="/dev/nvme0n1p2"
+  elif lsblk | grep -q "sda"; then
+    echo "Detected SATA/ATA drive"
+    BOOT_PART="/dev/sda1"
+    ROOT_PART="/dev/sda2"
+  else
+    echo "❌ Could not detect root partition."
+    exit 1
   fi
-done
+}
 
-# Optional: Try mounting home
-HOME_PART=$(lsblk -rpno NAME,MOUNTPOINT,FSTYPE | grep -i home | awk '{print $1}')
-if [[ -n "$HOME_PART" ]]; then
-  echo "🏠 Mounting home: $HOME_PART"
-  mkdir -p /mnt/home
-  mount "$HOME_PART" /mnt/home
-fi
+# Helper: Mount and chroot
+do_chroot() {
+  detect_root_partition
 
-# Bind special filesystems
-for dir in dev proc sys run; do
-  mount --bind /$dir /mnt/$dir
-done
+  echo "🔍 Mounting $ROOT_PART to /mnt"
+  mount "$ROOT_PART" /mnt
 
-# Enter chroot
-echo "🚪 Entering chroot..."
-chroot /mnt /bin/bash
+  echo "🔍 Mounting boot partition ($BOOT_PART)"
+  mount "$BOOT_PART" /mnt/boot
 
-# After exit
-echo "📦 Cleaning up..."
-for dir in dev proc sys run; do
-  umount -lf /mnt/$dir || true
-done
-umount -R /mnt || true
-echo "✅ Unmounted. Chroot session complete."
+  echo "🔗 Binding system directories..."
+  mount --types proc /proc /mnt/proc
+  mount --rbind /sys /mnt/sys
+  mount --make-rslave /mnt/sys
+  mount --rbind /dev /mnt/dev
+  mount --make-rslave /mnt/dev
+  mount --bind /run /mnt/run
+
+  echo "✅ Environment prepared. Entering chroot..."
+  chroot /mnt /bin/bash
+
+  echo "🧪 Checking if chroot was successful..."
+  if [[ "$(hostnamectl status 2>/dev/null | grep -i 'Static hostname')" != *archiso* ]]; then
+    echo "✅ You are now in your installed system!"
+  else
+    echo "⚠️ Still in live environment. Chroot may have failed."
+  fi
+}
+
+# Helper: Unmount
+do_unmount() {
+  echo "🔻 Unmounting all partitions..."
+  umount -R /mnt || echo "⚠️ Some mounts failed to unmount"
+  echo "✅ All cleaned up."
+}
+
+# Execute selected option
+case "$OPTION" in
+  1)
+    do_chroot
+    ;;
+  2)
+    do_unmount
+    ;;
+  *)
+    echo "❌ Invalid option."
+    exit 1
+    ;;
+esac
