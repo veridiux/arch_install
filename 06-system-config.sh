@@ -12,64 +12,57 @@ echo "🛠️ Entering chroot environment to configure system..."
 
 
 
-arch-chroot /mnt /bin/bash <<'EOF'
-
-
-
-
-
-# Ask and save configuration to config.sh
 
 # --- Hostname ---
 DEFAULT_HOSTNAME="Archlinux"
 read -rp "❓ What is your hostname? [$DEFAULT_HOSTNAME]: " HOSTNAME
 HOSTNAME=${HOSTNAME:-$DEFAULT_HOSTNAME}
-echo "$HOSTNAME" > /etc/hostname
-echo "HOSTNAME=\"$HOSTNAME\"" >> config.sh
+echo "$HOSTNAME" > /mnt/etc/hostname
 
 # --- Timezone ---
 DEFAULT_TIMEZONE="America/Chicago"
 read -rp "🌍 What is your timezone? [$DEFAULT_TIMEZONE]: " TIMEZONE
 TIMEZONE=${TIMEZONE:-$DEFAULT_TIMEZONE}
-ln -sf "/usr/share/zoneinfo/$TIMEZONE" /etc/localtime
-hwclock --systohc
-echo "TIMEZONE=\"$TIMEZONE\"" >> config.sh
+ln -sf "/usr/share/zoneinfo/$TIMEZONE" /mnt/etc/localtime
 
 # --- Locale ---
 DEFAULT_LOCALE="en_US"
 read -rp "🗣️ What locale do you want to use? [$DEFAULT_LOCALE]: " LOCALE
 LOCALE=${LOCALE:-$DEFAULT_LOCALE}
-sed -i "s/^#${LOCALE} UTF-8/${LOCALE} UTF-8/" /etc/locale.gen
-locale-gen
-echo "LANG=${LOCALE}.UTF-8" > /etc/locale.conf
-echo "LOCALE=\"$LOCALE\"" >> config.sh
+sed -i "s/^#${LOCALE} UTF-8/${LOCALE} UTF-8/" /mnt/etc/locale.gen
+echo "LANG=${LOCALE}.UTF-8" > /mnt/etc/locale.conf
 
 # --- Keyboard Layout ---
 DEFAULT_KEYMAP="us"
 read -rp "⌨️ What keyboard layout do you want? [$DEFAULT_KEYMAP]: " KEYMAP
 KEYMAP=${KEYMAP:-$DEFAULT_KEYMAP}
-echo "KEYMAP=$KEYMAP" > /etc/vconsole.conf
-echo "KEYMAP=\"$KEYMAP\"" >> config.sh
+echo "KEYMAP=$KEYMAP" > /mnt/etc/vconsole.conf
 
+# --- Enable multilib repo ---
+read -rp "📦 Enable multilib repo? [y/N]: " MULTILIB_CHOICE
+MULTILIB_CHOICE=${MULTILIB_CHOICE:-n}
+ENABLE_MULTILIB="$MULTILIB_CHOICE"
 
+if [[ "$ENABLE_MULTILIB" =~ ^[Yy]$ ]]; then
+  sed -i '/^\s*#\s*\[multilib\]/,/^$/{s/^#//}' /mnt/etc/pacman.conf
+  echo "✅ Multilib repo enabled (will sync on first pacman run in chroot)."
+fi
 
+# Save configuration for later use
+cat > config.sh <<EOF
+ROOT_PART="$ROOT_PART"
+HOSTNAME="$HOSTNAME"
+TIMEZONE="$TIMEZONE"
+LOCALE="$LOCALE"
+KEYMAP="$KEYMAP"
+ENABLE_MULTILIB="$ENABLE_MULTILIB"
+BOOTLOADER="$BOOTLOADER"
+FIRMWARE_MODE="$FIRMWARE_MODE"
+DRIVE="$DRIVE"
+EOF
 
-
-# Enable multilib repo inside the new system before chroot
-  read -rp "📦 Enable multilib repo? [y/N]: " MULTILIB_CHOICE
-  MULTILIB_CHOICE=${MULTILIB_CHOICE:-n}
-
-  if [[ "$MULTILIB_CHOICE" =~ ^[Yy]$ ]]; then
-    sed -i '/^\s*#\s*\[multilib\]/,/^$/{s/^#//}' /mnt/etc/pacman.conf
-    echo "✅ Multilib repo enabled (will sync on first pacman run in chroot)."
-  fi
-
-  if [[ "$MULTILIB_CHOICE" =~ ^[Yy]$ ]]; then
-    pacman -Syu --noconfirm
-  else
-    pacman -Syu --noconfirm
-  fi
-
+# Update packages before chroot
+pacman -Syu --noconfirm
 
 
 
@@ -79,6 +72,15 @@ echo "KEYMAP=\"$KEYMAP\"" >> config.sh
 echo "ENABLE_MULTILIB=\"$ENABLE_MULTILIB\"" >> config.sh
 
 
+
+
+
+arch-chroot /mnt /bin/bash <<'EOF'
+
+
+# --- Locale & Clock (deferred to chroot) ---
+locale-gen
+hwclock --systohc
 
 
 # --- Initramfs ---
