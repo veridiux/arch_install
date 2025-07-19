@@ -26,6 +26,19 @@ read -rp "⚙️  Use automatic partitioning? [y/n]: " AUTOPART
 # Assume variables $DRIVE, $AUTOPART, and $FIRMWARE_MODE are already set externally
 
 
+make_part_name() {
+  local base=$1
+  local num=$2
+  if [[ "$base" =~ ^/dev/nvme ]]; then
+    echo "${base}p${num}"
+  else
+    echo "${base}${num}"
+  fi
+}
+
+
+
+
 
 list_other_drives() {
   local exclude_drive="$1"
@@ -292,11 +305,12 @@ if [[ "$AUTOPART" == "y" ]]; then
   
   # Create root partition from end of swap to 100%
   parted "$DRIVE" --script mkpart primary ext4 "${SWAP_END}MiB" 100%
-  ROOT_PART="${DRIVE}${next_part}"
+  ROOT_PART=$(make_part_name "$DRIVE" "$next_part")
+  
   else
   # No swap, root partition from start_after_home to 100%
   parted "$DRIVE" --script mkpart primary ext4 "${start_after_home}MiB" 100%
-  ROOT_PART="${DRIVE}${next_part}"
+  ROOT_PART=$(make_part_name "$DRIVE" "$next_part")
   fi
   # read -rp "Coming soon"
   # if [[ "$USE_SEPARATE_HOME_DRIVE" =~ ^[Yy]$ ]]; then
