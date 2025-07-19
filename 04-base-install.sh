@@ -29,9 +29,6 @@ case "$BOOTLOADER" in
 esac
 
 # Pause here to inspect packages
-echo "⏸️  Packages after bootloader selection:"
-printf '  - %s\n' "${DEFAULT_BASE_PACKAGES[@]}"
-
 
 echo "🧱 Default base packages:"
 printf '  - %s\n' "${DEFAULT_BASE_PACKAGES[@]}"
