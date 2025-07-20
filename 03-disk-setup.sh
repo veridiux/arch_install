@@ -91,25 +91,31 @@ mkfs_with_force() {
 
 
 
-# create_btrfs_subvolumes() {
-#   local root_part="$1"
 
-#   echo "🌱 Creating Btrfs subvolumes on $root_part..."
 
-#   # Mount root partition temporarily
-#   if ! mount "$root_part" /mnt; then
-#     echo "❌ Failed to mount $root_part at /mnt"
-#     exit 1
-#   fi
+create_btrfs_subvolumes() {
+  local root_part="$1"
 
-#   btrfs subvolume create /mnt/@
-#   btrfs subvolume create /mnt/@home
-#   btrfs subvolume create /mnt/@log
-#   btrfs subvolume create /mnt/@cache
-#   btrfs subvolume create /mnt/@snapshots
+  echo "🌱 Creating Btrfs subvolumes on $root_part..."
 
-#   umount /mnt
-# }
+  # Mount root partition temporarily
+  if ! mount "$root_part" /mnt; then
+    echo "❌ Failed to mount $root_part at /mnt"
+    exit 1
+  fi
+
+  btrfs subvolume create /mnt/@
+  btrfs subvolume create /mnt/@home
+  btrfs subvolume create /mnt/@log
+  btrfs subvolume create /mnt/@cache
+  btrfs subvolume create /mnt/@snapshots
+
+  umount /mnt
+}
+
+
+
+
 
 
 
@@ -459,27 +465,44 @@ if [[ "$AUTOPART" == "y" ]]; then
 
 
 
+
+
+
+
+
+
+###################################################################################################################
   # Mount partitions
   echo "📂 Mounting partitions..."
 
-  # if [[ "$FS_TYPE" == "btrfs" ]]; then
-  #   create_btrfs_subvolumes "$ROOT_PART"
+  if [[ "$FS_TYPE" == "btrfs" ]]; then
+    create_btrfs_subvolumes "$ROOT_PART"
 
-  #   mount -o noatime,compress=zstd,subvol=@ "$ROOT_PART" /mnt
+    mount -o noatime,compress=zstd,subvol=@ "$ROOT_PART" /mnt
 
-  #   mkdir -p /mnt/var/log /mnt/var/cache /mnt/timeshift/snapshots
+    mkdir -p /mnt/var/log /mnt/var/cache /mnt/timeshift/snapshots
 
-  #   mount -o noatime,compress=zstd,subvol=@log "$ROOT_PART" /mnt/var/log
-  #   mount -o noatime,compress=zstd,subvol=@cache "$ROOT_PART" /mnt/var/cache
-  #   mount -o noatime,compress=zstd,subvol=@snapshots "$ROOT_PART" /mnt/timeshift/snapshots
+    mount -o noatime,compress=zstd,subvol=@log "$ROOT_PART" /mnt/var/log
+    mount -o noatime,compress=zstd,subvol=@cache "$ROOT_PART" /mnt/var/cache
+    mount -o noatime,compress=zstd,subvol=@snapshots "$ROOT_PART" /mnt/timeshift/snapshots
 
-  #   if [[ -z "$HOME_PART" ]]; then
-  #     mkdir -p /mnt/home
-  #     mount -o noatime,compress=zstd,subvol=@home "$ROOT_PART" /mnt/home
-  #   fi
-  # else
+    if [[ -z "$HOME_PART" ]]; then
+      mkdir -p /mnt/home
+      mount -o noatime,compress=zstd,subvol=@home "$ROOT_PART" /mnt/home
+    fi
+  else
     mount "$ROOT_PART" /mnt
-  # fi
+  fi
+
+
+
+
+
+
+
+
+
+
 
   if [[ "$FIRMWARE_MODE" == "UEFI" ]]; then
     if [[ "$BOOTLOADER" == "systemd-boot" ]]; then
@@ -720,25 +743,54 @@ else
     swapon "$SWAP_PART"
   fi
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+###############################################################################################################################################
   echo "📂 Mounting root partition..."
-  #   if [[ "$FS_TYPE" == "btrfs" ]]; then
-  #   create_btrfs_subvolumes "$ROOT_PART"
+    if [[ "$FS_TYPE" == "btrfs" ]]; then
+    create_btrfs_subvolumes "$ROOT_PART"
 
-  #   mount -o noatime,compress=zstd,subvol=@ "$ROOT_PART" /mnt
+    mount -o noatime,compress=zstd,subvol=@ "$ROOT_PART" /mnt
 
-  #   mkdir -p /mnt/var/log /mnt/var/cache /mnt/timeshift/snapshots
+    mkdir -p /mnt/var/log /mnt/var/cache /mnt/timeshift/snapshots
 
-  #   mount -o noatime,compress=zstd,subvol=@log "$ROOT_PART" /mnt/var/log
-  #   mount -o noatime,compress=zstd,subvol=@cache "$ROOT_PART" /mnt/var/cache
-  #   mount -o noatime,compress=zstd,subvol=@snapshots "$ROOT_PART" /mnt/timeshift/snapshots
+    mount -o noatime,compress=zstd,subvol=@log "$ROOT_PART" /mnt/var/log
+    mount -o noatime,compress=zstd,subvol=@cache "$ROOT_PART" /mnt/var/cache
+    mount -o noatime,compress=zstd,subvol=@snapshots "$ROOT_PART" /mnt/timeshift/snapshots
 
-  #   if [[ -z "$HOME_PART" ]]; then
-  #     mkdir -p /mnt/home
-  #     mount -o noatime,compress=zstd,subvol=@home "$ROOT_PART" /mnt/home
-  #   fi
-  # else
+    if [[ -z "$HOME_PART" ]]; then
+      mkdir -p /mnt/home
+      mount -o noatime,compress=zstd,subvol=@home "$ROOT_PART" /mnt/home
+    fi
+  else
     mount "$ROOT_PART" /mnt
-  # fi
+  fi
+
+
+
+
+
+
+
+
+
+
+
+
+
 
   if [ "$FIRMWARE_MODE" = "UEFI" ]; then
     if [ "$BOOTLOADER" = "systemd-boot" ]; then
