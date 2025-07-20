@@ -43,6 +43,29 @@ else
   BASE_PACKAGES=("${DEFAULT_BASE_PACKAGES[@]}")
 fi
 
+
+
+
+# Function to check filesystem type for a given mount point
+get_fs_type() {
+  findmnt -n -o FSTYPE --target "$1" 2>/dev/null || echo ""
+}
+
+# Check root and /home filesystems
+ROOT_FS=$(get_fs_type "/")
+HOME_FS=$(get_fs_type "/home")
+
+if [[ "$ROOT_FS" == "btrfs" || "$HOME_FS" == "btrfs" ]]; then
+  echo "🧾 Detected btrfs filesystem on / or /home, adding 'timeshift' to package list."
+  BASE_PACKAGES+=("timeshift")
+fi
+
+
+
+
+
+
+
 echo "📦 Final package list:"
 printf '  - %s\n' "${BASE_PACKAGES[@]}"
 
