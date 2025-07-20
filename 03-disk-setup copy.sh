@@ -91,22 +91,6 @@ mkfs_with_force() {
 
 
 
-create_btrfs_subvolumes() {
-  local root_part=\"$1\"
-
-  echo \"🌱 Creating Btrfs subvolumes on \$root_part...\"
-
-  mount \"\$root_part\" /mnt
-
-  btrfs subvolume create /mnt/@
-  btrfs subvolume create /mnt/@home
-  btrfs subvolume create /mnt/@log
-  btrfs subvolume create /mnt/@cache
-  btrfs subvolume create /mnt/@snapshots
-
-  umount /mnt
-}
-
 
 if [[ "$AUTOPART" == "y" ]]; then
   echo "🔍 Detecting current partition table on $DRIVE..."
