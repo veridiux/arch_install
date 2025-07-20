@@ -274,23 +274,6 @@ if [[ "$AUTOPART" == "y" ]]; then
     fi
   fi
 
-
-  # if [[ "$USE_SEPARATE_HOME_DRIVE" =~ ^[Yy]$ ]]; then
-  #   parted "$HOME_DRIVE" --script mkpart primary ext4 "${HOME_START}MiB" "$HOME_END"
-  #   HOME_PART="${HOME_DRIVE}${next_part}"
-  #   read -rp "Just checking..."
-  # fi
-
-
-
-
-  
-
-
-
-
-
-
   if [[ "$USE_SEPARATE_HOME_DRIVE" == "y" ]]; then
   start_after_home=$start_after_boot
 
@@ -324,32 +307,6 @@ if [[ "$AUTOPART" == "y" ]]; then
       start_after_home=${start_after_boot}
     fi
   fi
-
-
-
-
-
-
-
-
-  # Optional HOME partition
-  # if [[ -n "$HOME_SIZE" ]]; then
-  # Calculate home partition end in MiB
-  # HOME_START=${start_after_boot}
-  # HOME_END=$((HOME_START + HOME_SIZE_GB * 1024))
-  
-  # Create home partition
-  # parted "$DRIVE" --script mkpart primary ext4 "${HOME_START}MiB" "${HOME_END}MiB"
-  # HOME_PART="${DRIVE}${next_part}"
-  
-  # Update pointers for next partition start and partition number
-  # start_after_home=${HOME_END}
-  # next_part=$((next_part + 1))
-  # else
-  # start_after_home=${start_after_boot}
-  # fi
-
-
 
   # Optional SWAP
   if [[ -n "$SWAP_SIZE" ]]; then
@@ -657,15 +614,6 @@ else
 	  fi
 	}
 
-
-
-
-
-  
-  
-  
-  
-  
   
   # Format root partition with check
   current_fs=$(detect_fs "$ROOT_PART")

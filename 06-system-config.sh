@@ -120,43 +120,119 @@ elif [ "$BOOTLOADER" = "systemd-boot" ]; then
     exit 1
   fi
 
-  echo "⚙️ Installing systemd-boot..."
+#   echo "⚙️ Installing systemd-boot..."
 
-  # Ensure efivarfs is mounted
-  if ! mountpoint -q /sys/firmware/efi/efivars; then
-    echo "🔧 Mounting efivarfs..."
-    mount -t efivarfs efivarfs /sys/firmware/efi/efivars
-  fi
+#   # Ensure efivarfs is mounted
+#   if ! mountpoint -q /sys/firmware/efi/efivars; then
+#     echo "🔧 Mounting efivarfs..."
+#     mount -t efivarfs efivarfs /sys/firmware/efi/efivars
+#   fi
 
-  bootctl install || {
-    echo "❌ bootctl install failed."
-    exit 1
-  }
+#   bootctl install || {
+#     echo "❌ bootctl install failed."
+#     exit 1
+#   }
 
-  echo "📝 Creating systemd-boot configuration..."
-  mkdir -p /boot/loader/entries
+#   echo "📝 Creating systemd-boot configuration..."
+#   mkdir -p /boot/loader/entries
 
-  cat > /boot/loader/loader.conf <<LOADER
+#   cat > /boot/loader/loader.conf <<LOADER
+# default arch
+# timeout 3
+# editor no
+# LOADER
+
+#   PARTUUID="$(blkid -s PARTUUID -o value "$ROOT_PART")"
+#   cat > /boot/loader/entries/arch.conf <<ENTRY
+# title   Arch Linux
+# linux   /vmlinuz-linux
+# initrd  /initramfs-linux.img
+# options root=PARTUUID=$PARTUUID rw
+# ENTRY
+
+#   echo "💡 Configuring UEFI boot entry..."
+
+#   ESP_PART=$(findmnt -no SOURCE /boot/efi || findmnt -no SOURCE /boot)
+#   if [[ -z "$ESP_PART" ]]; then
+#     echo "❌ Could not determine ESP partition."
+#     exit 1
+#   fi
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+echo "⚙️ Installing systemd-boot..."
+
+# Ensure efivarfs is mounted
+if ! mountpoint -q /sys/firmware/efi/efivars; then
+  echo "🔧 Mounting efivarfs..."
+  mount -t efivarfs efivarfs /sys/firmware/efi/efivars
+fi
+
+bootctl install || {
+  echo "❌ bootctl install failed."
+  exit 1
+}
+
+echo "📝 Creating systemd-boot configuration..."
+mkdir -p /boot/loader/entries
+
+cat > /boot/loader/loader.conf <<LOADER
 default arch
 timeout 3
 editor no
 LOADER
 
-  PARTUUID="$(blkid -s PARTUUID -o value "$ROOT_PART")"
-  cat > /boot/loader/entries/arch.conf <<ENTRY
+PARTUUID="$(blkid -s PARTUUID -o value "$ROOT_PART")"
+
+# Detect if root partition is Btrfs
+FS_TYPE="$(blkid -s TYPE -o value "$ROOT_PART")"
+
+# Set default rootflags (empty)
+ROOTFLAGS=""
+
+if [[ "$FS_TYPE" == "btrfs" ]]; then
+  # Adjust this to your actual subvolume name
+  SUBVOL="@"
+  ROOTFLAGS="rootflags=subvol=$SUBVOL"
+  echo "ℹ️ Detected Btrfs root, adding rootflags=subvol=$SUBVOL"
+fi
+
+cat > /boot/loader/entries/arch.conf <<ENTRY
 title   Arch Linux
 linux   /vmlinuz-linux
 initrd  /initramfs-linux.img
-options root=PARTUUID=$PARTUUID rw
+options root=PARTUUID=$PARTUUID rw $ROOTFLAGS
 ENTRY
 
-  echo "💡 Configuring UEFI boot entry..."
+echo "💡 Configuring UEFI boot entry..."
 
-  ESP_PART=$(findmnt -no SOURCE /boot/efi || findmnt -no SOURCE /boot)
-  if [[ -z "$ESP_PART" ]]; then
-    echo "❌ Could not determine ESP partition."
-    exit 1
-  fi
+ESP_PART=$(findmnt -no SOURCE /boot/efi || findmnt -no SOURCE /boot)
+if [[ -z "$ESP_PART" ]]; then
+  echo "❌ Could not determine ESP partition."
+  exit 1
+fi
+
+
+
+
+
+
+
+
+
 
   ESP_DISK=$(lsblk -no PKNAME "$ESP_PART" | head -n1)
 
