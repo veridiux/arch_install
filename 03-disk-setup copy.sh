@@ -90,6 +90,27 @@ mkfs_with_force() {
 	}
 
 
+create_btrfs_subvolumes() {
+  local root_part="$1"
+
+  echo "🌱 Creating Btrfs subvolumes on $root_part..."
+
+  # Mount root partition temporarily
+  if ! mount "$root_part" /mnt; then
+    echo "❌ Failed to mount $root_part at /mnt"
+    exit 1
+  fi
+
+  btrfs subvolume create /mnt/@
+  btrfs subvolume create /mnt/@home
+  btrfs subvolume create /mnt/@log
+  btrfs subvolume create /mnt/@cache
+  btrfs subvolume create /mnt/@snapshots
+
+  umount /mnt
+}
+
+
 
 
 if [[ "$AUTOPART" == "y" ]]; then
