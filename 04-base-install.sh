@@ -46,19 +46,18 @@ fi
 
 
 
-# Function to check filesystem type for a given mount point
-get_fs_type() {
-  findmnt -n -o FSTYPE --target "$1" 2>/dev/null || echo ""
-}
-
-# Check root and /home filesystems
-ROOT_FS=$(get_fs_type "/")
-HOME_FS=$(get_fs_type "/home")
+# ➕ Detect if /mnt or /mnt/home use btrfs (target system's root and home)
+ROOT_FS=$(findmnt -n -o FSTYPE --target /mnt 2>/dev/null || echo "")
+HOME_FS=""
+if mountpoint -q /mnt/home; then
+  HOME_FS=$(findmnt -n -o FSTYPE --target /mnt/home 2>/dev/null || echo "")
+fi
 
 if [[ "$ROOT_FS" == "btrfs" || "$HOME_FS" == "btrfs" ]]; then
-  echo "🧾 Detected btrfs filesystem on / or /home, adding 'timeshift' to package list."
+  echo "🧾 Detected btrfs filesystem on /mnt or /mnt/home, adding 'timeshift' to package list."
   BASE_PACKAGES+=("timeshift")
 fi
+
 
 
 
