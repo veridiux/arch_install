@@ -25,8 +25,9 @@ sudo grub-install \
   --target=x86_64-efi \
   --efi-directory="$EFI_DIR" \
   --bootloader-id="$BOOTLOADER_ID" \
+  --sbat /usr/share/grub/sbat.csv \
   --modules="$GRUB_MODULES" \
-  --sbat /usr/share/grub/sbat.csv
+  --no-nvram
 
 echo "Signing GRUB..."
 sudo sbsign \
